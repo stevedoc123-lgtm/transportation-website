@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Success | Request Submitted</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%); 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            text-align: center;
+        }
+        .success-container { padding: 3rem; max-width: 600px; }
+        .success-icon { font-size: 5rem; margin-bottom: 1.5rem; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        h1 { font-size: 2.5rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9; }
+        .btn { display: inline-block; background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; padding: 15px 40px; text-decoration: none; border-radius: 50px; font-weight: 700; text-transform: uppercase; transition: all 0.3s; }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(233, 69, 96, 0.4); }
+        .details { margin-top: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.1); border-radius: 10px; text-align: left; }
+        .details h3 { margin-bottom: 1rem; color: #e94560; }
+        .details p { font-size: 1rem; margin: 0.5rem 0; }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✅</div>
+        <h1>Request Submitted</h1>
+        <p>Your request has been received and will be processed immediately. Check your email for confirmation.</p>
+        <a href="/" class="btn">Submit Another Request</a>
+        <div class="details">
+            <h3>What happens next:</h3>
+            <p>1. Email sent to stevedoc123@gmail.com</p>
+            <p>2. Discord alert posted</p>
+            <p>3. PDF generated with your request details</p>
+            <p>4. We'll contact you to confirm</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Form Handler</title>
+</head>
+<body>
+  <script>
+    // Auto-submit handler for forms
+    document.addEventListener('submit', async function(e) {
+      const form = e.target;
+      if (form.hasAttribute('data-netlify')) {
+        // Let Netlify handle the form submission
+        // Then send Discord notification
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+          // Send to Discord bridge function
+          fetch('/.netlify/functions/discord-bridge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              data: data,
+              form_name: form.getAttribute('name')
+            })
+          });
+        } catch (err) {
+          console.error('Discord notification failed:', err);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

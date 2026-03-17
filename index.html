@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Film Transportation Services | Production Logistics</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+            background: 
+                radial-gradient(circle at 20% 50%, #e94560 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, #0f3460 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, #533483 0%, transparent 50%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header */
+        header {
+            padding: 2rem 0;
+            border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: #e94560;
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #e94560;
+            transition: width 0.3s;
+        }
+        
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+        
+        /* Hero Section */
+        .hero {
+            padding: 6rem 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            background: linear-gradient(135deg, #fff, #e94560);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            color: rgba(255,255,255,0.7);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+        
+        /* Action Cards */
+        .actions {
+            padding: 4rem 0;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .action-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(233, 69, 96, 0.2);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.4s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(233, 69, 96, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .action-card:hover::before {
+            left: 100%;
+        }
+        
+        .action-card:hover {
+            transform: translateY(-10px);
+            border-color: #e94560;
+            box-shadow: 0 20px 40px rgba(233, 69, 96, 0.2);
+        }
+        
+        .action-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .action-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .action-card p {
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 2rem;
+        }
+        
+        .btn-action {
+            display: inline-block;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-action:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+        }
+        
+        /* Stats Section */
+        .stats {
+            padding: 4rem 0;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+        
+        .stat-item h3 {
+            font-size: 3rem;
+            color: #e94560;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-item p {
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+        }
+        
+        /* Footer */
+        footer {
+            padding: 3rem 0;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5);
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">Film Transpo</div>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/run-request.html">Run Request</a>
+                    <a href="/equipment.html">Equipment</a>
+                    <a href="mailto:stevedoc123@gmail.com">Contact</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Production Logistics</h1>
+            <p>Professional transportation and equipment services for film productions. Fast, reliable, 24/7.</p>
+        </div>
+    </section>
+
+    <section class="actions">
+        <div class="container">
+            <div class="action-grid">
+                <div class="action-card" onclick="window.location.href='/run-request.html'">
+                    <div class="action-icon">🚛</div>
+                    <h2>Request a Run</h2>
+                    <p>Pickup, delivery, exchange, or return services for your production needs.</p>
+                    <a href="/run-request.html" class="btn-action">Start Request</a>
+                </div>
+                
+                <div class="action-card" onclick="window.location.href='/equipment.html'">
+                    <div class="action-icon">🎬</div>
+                    <h2>Special Equipment</h2>
+                    <p>Order specialized production equipment with delivery to your set location.</p>
+                    <a href="/equipment.html" class="btn-action">Order Equipment</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>24/7</h3>
+                    <p>Availability</p>
+                </div>
+                <div class="stat-item">
+                    <h3>99%</h3>
+                    <p>On-Time Rate</p>
+                </div>
+                <div class="stat-item">
+                    <h3>500+</h3>
+                    <p>Productions</p>
+                </div>
+                <div class="stat-item">
+                    <h3>0</h3>
+                    <p>Missed Runs</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Film Transportation Services. All rights reserved.</p>
+            <p>stevedoc123@gmail.com</p>
+        </div>
+    </footer>
+</body>
+</html>

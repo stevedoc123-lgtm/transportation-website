@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Request | Film Transportation Services</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%); min-height: 100vh; color: #fff; padding-bottom: 3rem; }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+        header { padding: 1.5rem 0; border-bottom: 1px solid rgba(233, 69, 96, 0.3); margin-bottom: 2rem; }
+        nav { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .back-link { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; }
+        .back-link:hover { color: #e94560; }
+        .page-header { text-align: center; margin-bottom: 3rem; }
+        .page-header h1 { font-size: 2.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.5rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .page-header p { color: rgba(255,255,255,0.6); }
+        .form-container { background: rgba(255,255,255,0.05); border: 1px solid rgba(233, 69, 96, 0.2); border-radius: 20px; padding: 3rem; backdrop-filter: blur(10px); }
+        .form-group { margin-bottom: 2rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 10px; color: #fff; font-size: 1rem; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #e94560; box-shadow: 0 0 20px rgba(233, 69, 96, 0.2); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 1rem; }
+        .checkbox-group label { display: flex; align-items: center; font-weight: normal; cursor: pointer; text-transform: none; font-size: 1rem; }
+        .checkbox-group input { margin-right: 0.5rem; width: auto; }
+        .section-title { margin: 3rem 0 1.5rem; color: #e94560; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid rgba(233, 69, 96, 0.3); padding-bottom: 0.5rem; }
+        button[type="submit"] { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; padding: 18px 50px; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-transform: uppercase; cursor: pointer; width: 100%; transition: all 0.3s; }
+        button[type="submit"]:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(233, 69, 96, 0.4); }
+        .required { color: #e94560; }
+        .success-message { display: none; background: linear-gradient(135deg, #28a745, #34ce57); color: white; padding: 2rem; border-radius: 15px; text-align: center; margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="logo">Film Transpo</a>
+                <a href="/" class="back-link">← Back to Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Run Request</h1>
+            <p>Submit a pickup, delivery, exchange, or return request</p>
+        </div>
+
+        <div class="form-container">
+            <div class="success-message" id="success-message">
+                <h3>✅ Request Submitted Successfully!</h3>
+                <p>We'll confirm the details with you shortly.</p>
+            </div>
+
+            <form name="run-request" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+                <input type="hidden" name="form-name" value="run-request">
+                <input type="hidden" name="redirect" value="/success.html">
+                <p style="display: none;"><label>Don't fill: <input name="bot-field"></label></p>
+                
+                <h3 class="section-title">Requestor Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Requestor Name <span class="required">*</span></label>
+                        <input type="text" name="requestor_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Department <span class="required">*</span></label>
+                        <input type="text" name="department" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" name="phone" placeholder="(555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" placeholder="you@production.com">
+                    </div>
+                </div>
+
+                <h3 class="section-title">Run Details</h3>
+                <div class="form-group">
+                    <label>Type of Request <span class="required">*</span></label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="request_type[]" value="Pickup"> Pickup</label>
+                        <label><input type="checkbox" name="request_type[]" value="Delivery"> Delivery</label>
+                        <label><input type="checkbox" name="request_type[]" value="Exchange"> Exchange</label>
+                        <label><input type="checkbox" name="request_type[]" value="Return"> Return</label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Date of Run <span class="required">*</span></label><input type="date" name="date_of_run" required></div>
+                    <div class="form-group"><label>Date Needed <span class="required">*</span></label><input type="date" name="date_needed" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Time of Run <span class="required">*</span></label><input type="time" name="time_of_run" required></div>
+                    <div class="form-group"><label>Time Needed <span class="required">*</span></label><input type="time" name="time_needed" required></div>
+                </div>
+                <div class="form-group">
+                    <label>Payment Option</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="payment[]" value="PO"> PO</label>
+                        <label><input type="checkbox" name="payment[]" value="Cash"> Cash</label>
+                        <label><input type="checkbox" name="payment[]" value="Check"> Check</label>
+                        <label><input type="checkbox" name="payment[]" value="No Payment Required"> No Payment Required</label>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Pickup Information</h3>
+                <div class="form-group">
+                    <label>Pickup Contact / Vendor <span class="required">*</span></label>
+                    <input type="text" name="pickup_contact" required>
+                </div>
+                <div class="form-group">
+                    <label>Pickup Address <span class="required">*</span></label>
+                    <input type="text" name="pickup_address" placeholder="Street, City, State, ZIP" required>
+                </div>
+
+                <h3 class="section-title">Delivery Information</h3>
+                <div class="form-group">
+                    <label>Delivery Contact / Vendor <span class="required">*</span></label>
+                    <input type="text" name="delivery_contact" required>
+                </div>
+                <div class="form-group">
+                    <label>Delivery Phone <span class="required">*</span></label>
+                    <input type="tel" name="delivery_phone" placeholder="(555) 123-4567" required>
+                </div>
+                <div class="form-group">
+                    <label>Delivery Address <span class="required">*</span></label>
+                    <input type="text" name="delivery_address" placeholder="Street, City, State, ZIP" required>
+                </div>
+
+                <h3 class="section-title">Vehicle & Details</h3>
+                <div class="form-group">
+                    <label>Vehicle Type Needed</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="vehicle_type[]" value="Van"> Van</label>
+                        <label><input type="checkbox" name="vehicle_type[]" value="Stakebed"> Stakebed</label>
+                        <label><input type="checkbox" name="vehicle_type[]" value="Box Truck"> Box Truck</label>
+                        <label><input type="checkbox" name="vehicle_type[]" value="Special"> Special Vehicle</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description of Items</label>
+                    <textarea name="item_description" rows="3" placeholder="What needs to be transported?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Special Instructions</label>
+                    <textarea name="instructions" rows="3" placeholder="Any special handling requirements?"></textarea>
+                </div>
+
+                <button type="submit" id="submit-btn">Submit Run Request</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.querySelector('form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.textContent = 'Sending...';
+            btn.disabled = true;
+            
+            const formData = new FormData(this);
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+                if (data[key]) {
+                    data[key] = Array.isArray(data[key]) ? [...data[key], value] : [data[key], value];
+                } else {
+                    data[key] = value;
+                }
+            }
+            
+            // Send Discord notification
+            try {
+                await fetch('https://discord.com/api/webhooks/1481812099259826370/I__eWBIYtXWDF39iylv9iNBlG6sJIUxegIT0fmIMoHO-2Ukj8GYaHfEUXju-BLW6_lpT', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: '🚛 New Run Request',
+                            color: 0xe94560,
+                            timestamp: new Date().toISOString(),
+                            fields: [
+                                { name: 'Requestor', value: data.requestor_name || 'Unknown', inline: true },
+                                { name: 'Department', value: data.department || 'Unknown', inline: true },
+                                { name: 'Type', value: Array.isArray(data['request_type[]']) ? data['request_type[]'].join(', ') : data['request_type[]'] || 'N/A', inline: true },
+                                { name: 'Date Needed', value: data.date_needed || 'N/A', inline: true },
+                                { name: 'Time Needed', value: data.time_needed || 'N/A', inline: true },
+                                { name: 'Pickup', value: String(data.pickup_contact || 'N/A').substring(0, 1000) },
+                                { name: 'Delivery', value: String(data.delivery_contact || 'N/A').substring(0, 1000) }
+                            ],
+                            footer: { text: 'FilmTranspo.com' }
+                        }]
+                    })
+                });
+            } catch (err) {
+                console.error('Discord failed:', err);
+            }
+            
+            // Now submit the form
+            this.submit();
+        });
+    </script>
+</body>
+</html>

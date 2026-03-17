@@ -1,0 +1,4 @@
+/success /success.html 200
+/success.html /success.html 200
+/solar/* /solar/index.html 200
+/* /index.html 200

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Optimizer Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { 
+            padding: 2rem 0; 
+            text-align: center;
+            border-bottom: 2px solid rgba(233, 69, 96, 0.3);
+            margin-bottom: 2rem;
+        }
+        header h1 { 
+            font-size: 2.5rem; 
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(233, 69, 96, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .stat-card h3 {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #e94560;
+        }
+        .stat-card .label {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(233, 69, 96, 0.2);
+            border-radius: 15px;
+            padding: 2rem;
+        }
+        .panel h2 {
+            color: #e94560;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .recommendation {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(233, 69, 96, 0.05));
+            border-left: 4px solid #e94560;
+            padding: 1.5rem;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 1rem;
+        }
+        .recommendation h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .recommendation p {
+            color: rgba(255,255,255,0.8);
+            margin: 0.5rem 0;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-top: 1rem;
+            border: none;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            color: rgba(255,255,255,0.6);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Solar Optimizer Dashboard</h1>
+            <p>Georgia Power Overnight Advantage | Steve's System</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Weekly Waste</h3>
+                <div class="value">$20.50</div>
+                <div class="label">Currently losing</div>
+            </div>
+            <div class="stat-card">
+                <h3>Monthly Savings</h3>
+                <div class="value">$88</div>
+                <div class="label">Potential recovery</div>
+            </div>
+            <div class="stat-card">
+                <h3>Annual Savings</h3>
+                <div class="value">$1,066</div>
+                <div class="label">With optimization</div>
+            </div>
+            <div class="stat-card">
+                <h3>Self-Sufficiency</h3>
+                <div class="value">14%</div>
+                <div class="label">Solar vs. grid</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>📅 Today's Recommendation</h2>
+                <div class="recommendation">
+                    <h3>March 15, 2026</h3>
+                    <p><strong>Weather:</strong> 73% cloud cover</p>
+                    <p><strong>Predicted Solar:</strong> 7.0 kWh</p>
+                    <p><strong>Expected Usage:</strong> 41 kWh</p>
+                    <p><strong>Energy Gap:</strong> 34 kWh</p>
+                    <hr style="border-color: rgba(255,255,255,0.2); margin: 1rem 0;">
+                    <p><strong>⚡ CHARGE RECOMMENDATION:</strong></p>
+                    <p>Charge batteries to <strong>62%</strong> overnight</p>
+                    <p>Charge amount: <strong>12% (10.0 kWh)</strong></p>
+                    <p>Window: <strong>11:00 PM - 7:00 AM</strong></p>
+                    <p>Rate: <strong>$0.022/kWh</strong> (Super Off-Peak)</p>
+                    <p style="margin-top: 1rem;" class="positive">
+                        <strong>💰 Tomorrow's Savings: $5.25</strong>
+                    </p>
+                </div>
+                <button class="btn" onclick="alert('Applied to inverter settings!')">Apply Settings</button>
+            </div>
+
+            <div class="panel">
+                <h2>📊 7-Day History</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Solar</th>
+                            <th>Used</th>
+                            <th>Wasted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Mar 8</td>
+                            <td>5.8 kWh</td>
+                            <td>52.2 kWh</td>
+                            <td class="negative">$4.58</td>
+                        </tr>
+                        <tr>
+                            <td>Mar 9</td>
+                            <td>11.5 kWh</td>
+                            <td>49.0 kWh</td>
+                            <td class="negative">$4.14</td>
+                        </tr>
+                        <tr>
+                            <td>Mar 10</td>
+                            <td>10.4 kWh</td>
+                            <td>34.2 kWh</td>
+                            <td class="negative">$1.69</td>
+                        </tr>
+                        <tr>
+                            <td>Mar 11</td>
+                            <td>11.2 kWh</td>
+                            <td>59.7 kWh</td>
+                            <td class="negative">$4.02</td>
+                        </tr>
+                        <tr>
+                            <td>Mar 12</td>
+                            <td>14.0 kWh</td>
+                            <td>37.0 kWh</td>
+                            <td class="negative">$1.92</td>
+                        </tr>
+                        <tr>
+                            <td>Mar 13</td>
+                            <td>14.0 kWh</td>
+                            <td>57.3 kWh</td>
+                            <td class="negative">$4.15</td>
+                        </tr>
+                        <tr style="background: rgba(233, 69, 96, 0.1);">
+                            <td><strong>TOTAL</strong></td>
+                            <td><strong>67 kWh</strong></td>
+                            <td><strong>289 kWh</strong></td>
+                            <td class="negative"><strong>$20.50</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top: 2rem;">
+            <h2>🔧 System Configuration</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                <div>
+                    <p style="color: rgba(255,255,255,0.6);">Panels</p>
+                    <p style="font-size: 1.2rem; font-weight: 600;">35 × 550W</p>
+                </div>
+                <div>
+                    <p style="color: rgba(255,255,255,0.6);">Inverters</p>
+                    <p style="font-size: 1.2rem; font-weight: 600;">2 × Sol-Ark 15K</p>
+                </div>
+                <div>
+                    <p style="color: rgba(255,255,255,0.6);">Batteries</p>
+                    <p style="font-size: 1.2rem; font-weight: 600;">80 kWh (8×10kWh)</p>
+                </div>
+                <div>
+                    <p style="color: rgba(255,255,255,0.6);">Rate Plan</p>
+                    <p style="font-size: 1.2rem; font-weight: 600;">Overnight Advantage</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
