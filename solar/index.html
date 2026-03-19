@@ -164,14 +164,36 @@
             font-size: 0.9rem;
             color: rgba(255,255,255,0.6);
         }
-        .ev-badge {
-            padding: 0.25rem 0.8rem;
-            border-radius: 100px;
-            font-size: 0.8rem;
-            font-weight: 600;
+        .ev-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            user-select: none;
         }
-        .ev-on  { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.4); }
-        .ev-off { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1); }
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 100px;
+            transition: background 0.25s;
+            flex-shrink: 0;
+        }
+        .toggle-switch.on { background: #34d399; }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .toggle-switch.on::after { transform: translateX(24px); }
+        .ev-label { font-size: 0.9rem; color: rgba(255,255,255,0.7); }
+        .ev-kwh   { font-size: 0.8rem; color: rgba(255,255,255,0.35); }
 
         /* ── Footer ── */
         footer {
@@ -241,13 +263,14 @@ async function load() {
         <div class="hero">
             <div class="hero-label">Tonight's Battery Target</div>
             <div class="hero-date">Tomorrow · ${data.target_date}</div>
+            <div class="hero-value" id="hero-soc">${p.target_soc_pct}<span style="font-size:2rem">%</span></div>
+            <div id="hero-detail">
             ${noCharge
-                ? `<div class="hero-value">${p.target_soc_pct}<span style="font-size:2rem">%</span></div>
-                   <div class="no-charge-badge">✅ No charging needed tonight</div>`
-                : `<div class="hero-value">${p.target_soc_pct}<span style="font-size:2rem">%</span></div>
-                   <div class="hero-unit">Charge ${p.charge_needed_kwh} kWh between 11 PM – 7 AM</div>
+                ? `<div class="no-charge-badge">✅ No charging needed tonight</div>`
+                : `<div class="hero-unit">Charge ${p.charge_needed_kwh} kWh between 11 PM – 7 AM</div>
                    <div class="hero-sub">@ $0.022/kWh super off-peak rate</div>`
             }
+            </div>
         </div>
 
         <!-- Stats -->
@@ -282,10 +305,14 @@ async function load() {
             <span>📡 <b>${fc.shortwave_radiation} MJ/m²</b> radiation</span>
         </div>
 
-        <!-- EV -->
+        <!-- EV toggle -->
         <div class="ev-row">
-            <span>🚗 EV charging tonight</span>
-            <span class="ev-badge ${p.ev_charging ? 'ev-on' : 'ev-off'}">${p.ev_charging ? 'YES — 30 kWh' : 'NO'}</span>
+            <span>🚗 Charging the EV tonight?</span>
+            <label class="ev-toggle" id="ev-toggle">
+                <div class="toggle-switch on" id="toggle-switch"></div>
+                <span class="ev-label" id="ev-label">YES</span>
+                <span class="ev-kwh" id="ev-kwh">— 30 kWh</span>
+            </label>
         </div>
 
         <!-- Savings -->
@@ -297,28 +324,77 @@ async function load() {
             </div>
             <div class="savings-row">
                 <span class="label">Optimized tonight</span>
-                <span class="amount">${s.optimal_nightly_kwh} kWh · $${s.optimal_nightly_cost}/night</span>
+                <span class="amount" id="opt-kwh">${s.optimal_nightly_kwh} kWh · $${s.optimal_nightly_cost}/night</span>
             </div>
             <div class="savings-row" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:0.5rem;margin-top:0.3rem">
                 <span class="label">Tonight's saving</span>
-                <span class="amount green">$${s.daily_savings}</span>
+                <span class="amount green" id="saving-daily">$${s.daily_savings}</span>
             </div>
             <div class="savings-row">
                 <span class="label">Monthly run rate</span>
-                <span class="amount green">$${s.monthly_savings}</span>
+                <span class="amount green" id="saving-monthly">$${s.monthly_savings}</span>
             </div>
             <div class="savings-row">
                 <span class="label">Annual run rate</span>
-                <span class="amount green">$${s.annual_savings}</span>
+                <span class="amount green" id="saving-annual">$${s.annual_savings}</span>
             </div>
         </div>
     `;
 
     footer.textContent = `Last updated: ${data.generated_at} · Model accuracy — Solar R²: ${data.solar_r2} · Load R²: ${data.load_r2}`;
+
+    // ── EV toggle logic ──────────────────────────────────────────
+    const BATTERY_KWH   = 80;
+    const MIN_SOC       = 0.20;
+    const MAX_SOC       = 0.90;
+    const RATE          = 0.022;
+    const OLD_CHARGE    = 64;    // what you charge now (80% of 80kWh)
+    const EV_KWH        = 30;
+    const SPA_KWH       = 4;
+
+    let evOn = true;
+
+    function recalc() {
+        const overnightLoads = SPA_KWH + (evOn ? EV_KWH : 0);
+        const currentKwh     = BATTERY_KWH * (p.current_soc_pct / 100);
+        const minKwh         = BATTERY_KWH * MIN_SOC;
+        const maxKwh         = BATTERY_KWH * MAX_SOC;
+        const buffer         = p.predicted_load_kwh * 0.10;
+        const targetKwh      = Math.min(maxKwh, minKwh + overnightLoads + p.solar_gap_kwh + buffer);
+        const chargeNeeded   = Math.max(0, Math.round(targetKwh - currentKwh));
+        const targetSoc      = Math.round(targetKwh / BATTERY_KWH * 100);
+        const optCost        = (chargeNeeded * RATE).toFixed(2);
+        const oldCost        = (OLD_CHARGE * RATE).toFixed(2);
+        const dailySav       = (oldCost - optCost).toFixed(2);
+
+        // Update hero
+        document.getElementById('hero-soc').textContent  = targetSoc + '%';
+        if (chargeNeeded === 0) {
+            document.getElementById('hero-detail').innerHTML =
+                `<div class="no-charge-badge">✅ No charging needed tonight</div>`;
+        } else {
+            document.getElementById('hero-detail').innerHTML =
+                `<div class="hero-unit">Charge ${chargeNeeded} kWh between 11 PM – 7 AM</div>
+                 <div class="hero-sub">@ $0.022/kWh super off-peak rate</div>`;
+        }
+
+        // Update savings
+        document.getElementById('opt-kwh').textContent    = `${chargeNeeded} kWh · $${optCost}/night`;
+        document.getElementById('saving-daily').textContent   = `$${dailySav}`;
+        document.getElementById('saving-monthly').textContent = `$${(dailySav * 30).toFixed(2)}`;
+        document.getElementById('saving-annual').textContent  = `$${(dailySav * 365).toFixed(2)}`;
+    }
+
+    document.getElementById('ev-toggle').addEventListener('click', () => {
+        evOn = !evOn;
+        document.getElementById('toggle-switch').classList.toggle('on', evOn);
+        document.getElementById('ev-label').textContent = evOn ? 'YES' : 'NO';
+        document.getElementById('ev-kwh').textContent   = evOn ? '— 30 kWh' : '— saving 30 kWh';
+        recalc();
+    });
 }
 
 load();
-// Auto-refresh every 10 minutes
 setInterval(load, 10 * 60 * 1000);
 </script>
 </body>
