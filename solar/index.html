@@ -3,257 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar Optimizer Dashboard</title>
+    <title>Solar Optimizer — Shadowmoor</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
             min-height: 100vh;
             color: #fff;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { 
-            padding: 2rem 0; 
+
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+        header {
+            padding: 2rem 0 1.5rem;
             text-align: center;
             border-bottom: 2px solid rgba(233, 69, 96, 0.3);
             margin-bottom: 2rem;
         }
-        header h1 { 
-            font-size: 2.5rem; 
+        header h1 {
+            font-size: 2.2rem;
             background: linear-gradient(135deg, #e94560, #ff6b6b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
         }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .stat-card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(233, 69, 96, 0.2);
-            border-radius: 15px;
-            padding: 1.5rem;
+        header p { color: rgba(255,255,255,0.45); font-size: 0.85rem; }
+
+        /* ── Hero charge target ── */
+        .hero {
+            background: rgba(233, 69, 96, 0.08);
+            border: 2px solid rgba(233, 69, 96, 0.4);
+            border-radius: 20px;
+            padding: 2.5rem;
             text-align: center;
+            margin-bottom: 1.5rem;
         }
-        .stat-card h3 {
-            color: rgba(255,255,255,0.6);
-            font-size: 0.9rem;
+        .hero-label {
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.5);
             margin-bottom: 0.5rem;
         }
-        .stat-card .value {
-            font-size: 2.5rem;
+        .hero-date {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 1rem;
+        }
+        .hero-value {
+            font-size: 5rem;
             font-weight: 700;
-            color: #e94560;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
         }
-        .stat-card .label {
-            color: rgba(255,255,255,0.5);
-            font-size: 0.9rem;
+        .hero-unit {
+            font-size: 1.4rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 0.3rem;
         }
-        .main-content {
+        .hero-sub {
+            margin-top: 1rem;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.55);
+        }
+        .no-charge-badge {
+            display: inline-block;
+            background: rgba(52, 211, 153, 0.15);
+            border: 1px solid rgba(52, 211, 153, 0.5);
+            color: #34d399;
+            padding: 0.4rem 1.2rem;
+            border-radius: 100px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        /* ── Stats grid ── */
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-        @media (max-width: 768px) {
-            .main-content { grid-template-columns: 1fr; }
-        }
-        .panel {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(233, 69, 96, 0.2);
-            border-radius: 15px;
-            padding: 2rem;
-        }
-        .panel h2 {
-            color: #e94560;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
             margin-bottom: 1.5rem;
-            font-size: 1.3rem;
+        }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 1.2rem 1.4rem;
+        }
+        .card-label {
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 0.4rem;
         }
-        .recommendation {
-            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(233, 69, 96, 0.05));
-            border-left: 4px solid #e94560;
-            padding: 1.5rem;
-            border-radius: 0 10px 10px 0;
-            margin-bottom: 1rem;
-        }
-        .recommendation h3 {
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-        }
-        .recommendation p {
-            color: rgba(255,255,255,0.8);
-            margin: 0.5rem 0;
-        }
-        .btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #e94560, #ff6b6b);
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 25px;
+        .card-value {
+            font-size: 1.8rem;
             font-weight: 600;
-            margin-top: 1rem;
-            border: none;
-            cursor: pointer;
+            color: #fff;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .card-unit { font-size: 0.9rem; color: rgba(255,255,255,0.4); margin-left: 3px; }
+        .card-sub { font-size: 0.8rem; color: rgba(255,255,255,0.35); margin-top: 0.2rem; }
+
+        /* ── Weather row ── */
+        .weather-row {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 1rem 1.4rem;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.55);
         }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+        .weather-row span b { color: rgba(255,255,255,0.85); }
+
+        /* ── Savings bar ── */
+        .savings {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1.5rem;
         }
-        th {
-            color: rgba(255,255,255,0.6);
-            font-weight: 600;
+        .savings-title {
+            font-size: 0.75rem;
             text-transform: uppercase;
-            font-size: 0.85rem;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 0.8rem;
         }
-        .positive { color: #2ecc71; }
-        .negative { color: #e74c3c; }
+        .savings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        .savings-row .label { color: rgba(255,255,255,0.55); }
+        .savings-row .amount { font-weight: 600; }
+        .savings-row .amount.green { color: #34d399; }
+
+        /* ── EV toggle ── */
+        .ev-row {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 1rem 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .ev-badge {
+            padding: 0.25rem 0.8rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .ev-on  { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.4); }
+        .ev-off { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1); }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            color: rgba(255,255,255,0.2);
+            font-size: 0.75rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* ── Loading / error states ── */
+        .state-box {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: rgba(255,255,255,0.4);
+        }
+        .state-box h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .state-box p  { font-size: 0.9rem; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>⚡ Solar Optimizer Dashboard</h1>
-            <p>Georgia Power Overnight Advantage | Steve's System</p>
-        </header>
+<div class="container">
+    <header>
+        <h1>⚡ Solar Optimizer</h1>
+        <p>225 Shadowmoor Dr · Georgia Power Overnight Advantage</p>
+    </header>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Weekly Waste</h3>
-                <div class="value">$20.50</div>
-                <div class="label">Currently losing</div>
-            </div>
-            <div class="stat-card">
-                <h3>Monthly Savings</h3>
-                <div class="value">$88</div>
-                <div class="label">Potential recovery</div>
-            </div>
-            <div class="stat-card">
-                <h3>Annual Savings</h3>
-                <div class="value">$1,066</div>
-                <div class="label">With optimization</div>
-            </div>
-            <div class="stat-card">
-                <h3>Self-Sufficiency</h3>
-                <div class="value">14%</div>
-                <div class="label">Solar vs. grid</div>
-            </div>
-        </div>
-
-        <div class="main-content">
-            <div class="panel">
-                <h2>📅 Today's Recommendation</h2>
-                <div class="recommendation">
-                    <h3>March 15, 2026</h3>
-                    <p><strong>Weather:</strong> 73% cloud cover</p>
-                    <p><strong>Predicted Solar:</strong> 7.0 kWh</p>
-                    <p><strong>Expected Usage:</strong> 41 kWh</p>
-                    <p><strong>Energy Gap:</strong> 34 kWh</p>
-                    <hr style="border-color: rgba(255,255,255,0.2); margin: 1rem 0;">
-                    <p><strong>⚡ CHARGE RECOMMENDATION:</strong></p>
-                    <p>Charge batteries to <strong>62%</strong> overnight</p>
-                    <p>Charge amount: <strong>12% (10.0 kWh)</strong></p>
-                    <p>Window: <strong>11:00 PM - 7:00 AM</strong></p>
-                    <p>Rate: <strong>$0.022/kWh</strong> (Super Off-Peak)</p>
-                    <p style="margin-top: 1rem;" class="positive">
-                        <strong>💰 Tomorrow's Savings: $5.25</strong>
-                    </p>
-                </div>
-                <button class="btn" onclick="alert('Applied to inverter settings!')">Apply Settings</button>
-            </div>
-
-            <div class="panel">
-                <h2>📊 7-Day History</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Solar</th>
-                            <th>Used</th>
-                            <th>Wasted</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Mar 8</td>
-                            <td>5.8 kWh</td>
-                            <td>52.2 kWh</td>
-                            <td class="negative">$4.58</td>
-                        </tr>
-                        <tr>
-                            <td>Mar 9</td>
-                            <td>11.5 kWh</td>
-                            <td>49.0 kWh</td>
-                            <td class="negative">$4.14</td>
-                        </tr>
-                        <tr>
-                            <td>Mar 10</td>
-                            <td>10.4 kWh</td>
-                            <td>34.2 kWh</td>
-                            <td class="negative">$1.69</td>
-                        </tr>
-                        <tr>
-                            <td>Mar 11</td>
-                            <td>11.2 kWh</td>
-                            <td>59.7 kWh</td>
-                            <td class="negative">$4.02</td>
-                        </tr>
-                        <tr>
-                            <td>Mar 12</td>
-                            <td>14.0 kWh</td>
-                            <td>37.0 kWh</td>
-                            <td class="negative">$1.92</td>
-                        </tr>
-                        <tr>
-                            <td>Mar 13</td>
-                            <td>14.0 kWh</td>
-                            <td>57.3 kWh</td>
-                            <td class="negative">$4.15</td>
-                        </tr>
-                        <tr style="background: rgba(233, 69, 96, 0.1);">
-                            <td><strong>TOTAL</strong></td>
-                            <td><strong>67 kWh</strong></td>
-                            <td><strong>289 kWh</strong></td>
-                            <td class="negative"><strong>$20.50</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="panel" style="margin-top: 2rem;">
-            <h2>🔧 System Configuration</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
-                <div>
-                    <p style="color: rgba(255,255,255,0.6);">Panels</p>
-                    <p style="font-size: 1.2rem; font-weight: 600;">35 × 550W</p>
-                </div>
-                <div>
-                    <p style="color: rgba(255,255,255,0.6);">Inverters</p>
-                    <p style="font-size: 1.2rem; font-weight: 600;">2 × Sol-Ark 15K</p>
-                </div>
-                <div>
-                    <p style="color: rgba(255,255,255,0.6);">Batteries</p>
-                    <p style="font-size: 1.2rem; font-weight: 600;">80 kWh (8×10kWh)</p>
-                </div>
-                <div>
-                    <p style="color: rgba(255,255,255,0.6);">Rate Plan</p>
-                    <p style="font-size: 1.2rem; font-weight: 600;">Overnight Advantage</p>
-                </div>
-            </div>
+    <div id="app">
+        <div class="state-box">
+            <h2>Loading…</h2>
+            <p>Fetching tonight's recommendation</p>
         </div>
     </div>
+
+    <footer id="footer"></footer>
+</div>
+
+<script>
+async function load() {
+    const app    = document.getElementById('app');
+    const footer = document.getElementById('footer');
+
+    let data;
+    try {
+        const resp = await fetch('data.json?t=' + Date.now());
+        data = await resp.json();
+    } catch (e) {
+        app.innerHTML = `<div class="state-box"><h2>Could not load data</h2><p>${e.message}</p></div>`;
+        return;
+    }
+
+    if (data.status === 'pending') {
+        app.innerHTML = `<div class="state-box"><h2>⏳ ${data.message}</h2><p>Check back after 7 PM</p></div>`;
+        return;
+    }
+
+    const p  = data.prediction;
+    const s  = data.savings;
+    const fc = data.forecast;
+    const noCharge = p.charge_needed_kwh === 0;
+
+    const cloudIcon = fc.cloud_cover_pct < 30 ? '☀️' :
+                      fc.cloud_cover_pct < 60 ? '⛅' : '☁️';
+
+    app.innerHTML = `
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-label">Tonight's Battery Target</div>
+            <div class="hero-date">Tomorrow · ${data.target_date}</div>
+            ${noCharge
+                ? `<div class="hero-value">${p.target_soc_pct}<span style="font-size:2rem">%</span></div>
+                   <div class="no-charge-badge">✅ No charging needed tonight</div>`
+                : `<div class="hero-value">${p.target_soc_pct}<span style="font-size:2rem">%</span></div>
+                   <div class="hero-unit">Charge ${p.charge_needed_kwh} kWh between 11 PM – 7 AM</div>
+                   <div class="hero-sub">@ $0.022/kWh super off-peak rate</div>`
+            }
+        </div>
+
+        <!-- Stats -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-label">Battery Now</div>
+                <div class="card-value">${p.current_soc_pct}<span class="card-unit">%</span></div>
+                <div class="card-sub">${p.current_kwh} kWh stored</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Predicted Solar</div>
+                <div class="card-value">${p.predicted_solar_kwh}<span class="card-unit">kWh</span></div>
+                <div class="card-sub">${cloudIcon} ${fc.cloud_cover_pct}% cloud · ${fc.sunshine_hours.toFixed(1)} hrs sun</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Predicted Load</div>
+                <div class="card-value">${p.predicted_load_kwh}<span class="card-unit">kWh</span></div>
+                <div class="card-sub">House + EV + spa</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Solar Gap</div>
+                <div class="card-value">${p.solar_gap_kwh}<span class="card-unit">kWh</span></div>
+                <div class="card-sub">Grid or battery must cover this</div>
+            </div>
+        </div>
+
+        <!-- Weather -->
+        <div class="weather-row">
+            <span>${cloudIcon} <b>${fc.cloud_cover_pct}%</b> cloud cover</span>
+            <span>☀️ <b>${fc.sunshine_hours.toFixed(1)} hrs</b> sunshine</span>
+            <span>🌡️ <b>${fc.temp_min_f}° – ${fc.temp_max_f}°F</b></span>
+            <span>📡 <b>${fc.shortwave_radiation} MJ/m²</b> radiation</span>
+        </div>
+
+        <!-- EV -->
+        <div class="ev-row">
+            <span>🚗 EV charging tonight</span>
+            <span class="ev-badge ${p.ev_charging ? 'ev-on' : 'ev-off'}">${p.ev_charging ? 'YES — 30 kWh' : 'NO'}</span>
+        </div>
+
+        <!-- Savings -->
+        <div class="savings">
+            <div class="savings-title">💰 Savings vs charging to 100% every night</div>
+            <div class="savings-row">
+                <span class="label">Old way (100% every night)</span>
+                <span class="amount">${s.current_nightly_kwh} kWh · $${s.current_nightly_cost}/night</span>
+            </div>
+            <div class="savings-row">
+                <span class="label">Optimized tonight</span>
+                <span class="amount">${s.optimal_nightly_kwh} kWh · $${s.optimal_nightly_cost}/night</span>
+            </div>
+            <div class="savings-row" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:0.5rem;margin-top:0.3rem">
+                <span class="label">Tonight's saving</span>
+                <span class="amount green">$${s.daily_savings}</span>
+            </div>
+            <div class="savings-row">
+                <span class="label">Monthly run rate</span>
+                <span class="amount green">$${s.monthly_savings}</span>
+            </div>
+            <div class="savings-row">
+                <span class="label">Annual run rate</span>
+                <span class="amount green">$${s.annual_savings}</span>
+            </div>
+        </div>
+    `;
+
+    footer.textContent = `Last updated: ${data.generated_at} · Model accuracy — Solar R²: ${data.solar_r2} · Load R²: ${data.load_r2}`;
+}
+
+load();
+// Auto-refresh every 10 minutes
+setInterval(load, 10 * 60 * 1000);
+</script>
 </body>
 </html>
