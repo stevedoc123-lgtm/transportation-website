@@ -249,12 +249,18 @@
         <div class="hotel-grid" id="hotel-cards"></div>
 
         <!-- Trend Chart -->
-        <div class="section-label">30-Day Trends</div>
+        <div class="section-label">Trends</div>
         <div class="chart-wrapper">
             <div class="chart-tabs">
                 <button class="chart-tab active" onclick="switchChart('occ',this)">Occupancy %</button>
                 <button class="chart-tab" onclick="switchChart('rev',this)">Revenue</button>
                 <button class="chart-tab" onclick="switchChart('adr',this)">ADR</button>
+                <span style="flex:1"></span>
+                <button class="chart-tab range-tab active-range" onclick="switchRange(30,this)">30D</button>
+                <button class="chart-tab range-tab" onclick="switchRange(90,this)">3M</button>
+                <button class="chart-tab range-tab" onclick="switchRange(180,this)">6M</button>
+                <button class="chart-tab range-tab" onclick="switchRange(365,this)">1Y</button>
+                <button class="chart-tab range-tab" onclick="switchRange(9999,this)">All</button>
             </div>
             <div class="chart-container">
                 <canvas id="trendChart"></canvas>
@@ -295,6 +301,7 @@ const HOTEL_COLORS = [
 let chartInstance = null;
 let allData = null;
 let currentMetric = 'occ';
+let currentRange = 30;
 
 function fmt$(n)  { return n != null ? '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}) : '—'; }
 function fmtPct(n){ return n != null ? n.toFixed(1) + '%' : '—'; }
@@ -379,13 +386,24 @@ function buildChart(metric) {
     const data = allData;
     if (!data) return;
 
-    const labels = data.hotels[0].trend_30d.map(r => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - currentRange);
+
+    const filterTrend = trend => currentRange >= 9999 ? trend :
+        trend.filter(r => new Date(r.report_date + 'T12:00:00') >= cutoff);
+
+    const baseTrend = filterTrend(data.hotels[0].trend_30d);
+    const tickLimit = currentRange <= 30 ? 15 : currentRange <= 90 ? 12 : currentRange <= 180 ? 10 : 12;
+
+    const labels = baseTrend.map(r => {
         const d = new Date(r.report_date + 'T12:00:00');
-        return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+        return currentRange <= 90
+            ? d.toLocaleDateString('en-US', {month:'short', day:'numeric'})
+            : d.toLocaleDateString('en-US', {month:'short', year:'2-digit'});
     });
 
     const datasets = data.hotels.map((h, i) => {
-        const vals = h.trend_30d.map(r =>
+        const vals = filterTrend(h.trend_30d).map(r =>
             metric === 'occ' ? r.occupancy_pct :
             metric === 'rev' ? r.revenue :
             r.adr
@@ -432,7 +450,7 @@ function buildChart(metric) {
             },
             scales: {
                 x: {
-                    ticks: { color: 'rgba(255,255,255,0.35)', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+                    ticks: { color: 'rgba(255,255,255,0.35)', maxRotation: 0, autoSkip: true, maxTicksLimit: tickLimit },
                     grid: { color: 'rgba(255,255,255,0.05)' }
                 },
                 y: {
@@ -448,9 +466,16 @@ function buildChart(metric) {
 }
 
 function switchChart(metric, btn) {
-    document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.chart-tab:not(.range-tab)').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     buildChart(metric);
+}
+
+function switchRange(days, btn) {
+    currentRange = days;
+    document.querySelectorAll('.range-tab').forEach(t => t.classList.remove('active-range', 'active'));
+    btn.classList.add('active', 'active-range');
+    buildChart(currentMetric);
 }
 
 // Load data
