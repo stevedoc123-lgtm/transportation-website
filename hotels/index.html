@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Portfolio — Bold HG</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0f0a 0%, #0d1f1a 50%, #0a1a16 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        header {
+            padding: 2rem 0 1.5rem;
+            text-align: center;
+            border-bottom: 2px solid rgba(0, 212, 170, 0.3);
+            margin-bottom: 2rem;
+        }
+        header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #00d4aa, #00f5c8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.3rem;
+        }
+        header p { color: rgba(255,255,255,0.45); font-size: 0.85rem; }
+
+        /* ── Portfolio Hero ── */
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .hero-card {
+            background: rgba(0, 212, 170, 0.08);
+            border: 2px solid rgba(0, 212, 170, 0.35);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .hero-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 0.5rem;
+        }
+        .hero-value {
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4aa, #00f5c8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-sub { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-top: 0.3rem; }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.4);
+            margin: 2rem 0 1rem;
+        }
+
+        /* ── Hotel Cards ── */
+        .hotel-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .hotel-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.4rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .hotel-card:hover, .hotel-card.active {
+            border-color: rgba(0, 212, 170, 0.5);
+            background: rgba(0, 212, 170, 0.06);
+        }
+        .hotel-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 0.3rem;
+        }
+        .hotel-sub {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 1rem;
+        }
+        .hotel-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+        .stat-box { text-align: center; }
+        .stat-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .stat-lbl {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 0.15rem;
+        }
+        .occ-high { color: #00d4aa; }
+        .occ-mid  { color: #ffd166; }
+        .occ-low  { color: #ef476f; }
+
+        /* ── Chart area ── */
+        .chart-wrapper {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .chart-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .chart-tab {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: transparent;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chart-tab.active {
+            background: rgba(0, 212, 170, 0.15);
+            border-color: rgba(0, 212, 170, 0.5);
+            color: #00d4aa;
+        }
+        .chart-container { position: relative; height: 280px; }
+
+        /* ── MTD Table ── */
+        .table-wrapper {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: rgba(0, 212, 170, 0.1);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.5);
+        }
+        td {
+            padding: 0.75rem 1rem;
+            font-size: 0.88rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+        .td-hotel { font-weight: 600; color: #00d4aa; }
+        .td-good  { color: #00d4aa; }
+        .td-warn  { color: #ffd166; }
+        .td-bad   { color: #ef476f; }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            color: rgba(255,255,255,0.25);
+            font-size: 0.75rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* ── Loading / error ── */
+        #loading {
+            text-align: center;
+            padding: 4rem;
+            color: rgba(255,255,255,0.4);
+        }
+        #error-msg {
+            display: none;
+            background: rgba(239, 71, 111, 0.1);
+            border: 1px solid rgba(239, 71, 111, 0.4);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: #ef476f;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            .hero { grid-template-columns: 1fr; }
+            .hotel-grid { grid-template-columns: 1fr; }
+            .hotel-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Hotel Portfolio</h1>
+        <p id="as-of">Loading...</p>
+    </header>
+
+    <div id="error-msg"></div>
+    <div id="loading">Loading portfolio data...</div>
+    <div id="main" style="display:none">
+
+        <!-- Portfolio Hero -->
+        <div class="hero">
+            <div class="hero-card">
+                <div class="hero-label">Yesterday Revenue</div>
+                <div class="hero-value" id="port-revenue">—</div>
+                <div class="hero-sub">All 4 properties</div>
+            </div>
+            <div class="hero-card">
+                <div class="hero-label">Avg Occupancy</div>
+                <div class="hero-value" id="port-occ">—</div>
+                <div class="hero-sub">Portfolio average</div>
+            </div>
+            <div class="hero-card">
+                <div class="hero-label">Month-to-Date Revenue</div>
+                <div class="hero-value" id="port-mtd">—</div>
+                <div class="hero-sub" id="port-mtd-sub">—</div>
+            </div>
+        </div>
+
+        <!-- Hotel Cards -->
+        <div class="section-label">Yesterday by Property</div>
+        <div class="hotel-grid" id="hotel-cards"></div>
+
+        <!-- Trend Chart -->
+        <div class="section-label">30-Day Trends</div>
+        <div class="chart-wrapper">
+            <div class="chart-tabs">
+                <button class="chart-tab active" onclick="switchChart('occ',this)">Occupancy %</button>
+                <button class="chart-tab" onclick="switchChart('rev',this)">Revenue</button>
+                <button class="chart-tab" onclick="switchChart('adr',this)">ADR</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- MTD Summary Table -->
+        <div class="section-label">Month-to-Date Summary</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Days</th>
+                        <th>Avg Occ %</th>
+                        <th>Avg ADR</th>
+                        <th>Room Revenue</th>
+                        <th>Total Revenue</th>
+                    </tr>
+                </thead>
+                <tbody id="mtd-table"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <footer id="footer">—</footer>
+</div>
+
+<script>
+const HOTEL_COLORS = [
+    { line: '#00d4aa', fill: 'rgba(0,212,170,0.12)' },
+    { line: '#45b7d1', fill: 'rgba(69,183,209,0.12)' },
+    { line: '#a29bfe', fill: 'rgba(162,155,254,0.12)' },
+    { line: '#ffd166', fill: 'rgba(255,209,102,0.12)' },
+];
+
+let chartInstance = null;
+let allData = null;
+let currentMetric = 'occ';
+
+function fmt$(n)  { return n != null ? '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}) : '—'; }
+function fmtPct(n){ return n != null ? n.toFixed(1) + '%' : '—'; }
+function fmtAdr(n){ return n != null ? '$' + Number(n).toFixed(2) : '—'; }
+function occClass(n){ return n >= 75 ? 'occ-high' : n >= 55 ? 'occ-mid' : 'occ-low'; }
+
+function render(data) {
+    allData = data;
+
+    // Header
+    const d = new Date(data.as_of_date + 'T12:00:00');
+    const fmt = d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+    document.getElementById('as-of').textContent = 'As of ' + fmt;
+
+    // Portfolio hero
+    const p = data.portfolio;
+    document.getElementById('port-revenue').textContent = fmt$(p.yesterday_revenue);
+    document.getElementById('port-occ').textContent     = fmtPct(p.yesterday_avg_occupancy);
+    document.getElementById('port-mtd').textContent     = fmt$(p.mtd_revenue);
+    document.getElementById('port-mtd-sub').textContent = new Date().toLocaleDateString('en-US', {month:'long', year:'numeric'});
+
+    // Hotel cards
+    const grid = document.getElementById('hotel-cards');
+    grid.innerHTML = '';
+    data.hotels.forEach((h, i) => {
+        const y = h.yesterday;
+        const occ = y.occupancy_pct;
+        const card = document.createElement('div');
+        card.className = 'hotel-card';
+        card.innerHTML = `
+            <div class="hotel-name">${h.name}</div>
+            <div class="hotel-sub">${h.rooms} rooms · RevPAR ${h.revpar != null ? '$'+h.revpar : '—'}</div>
+            <div class="hotel-stats">
+                <div class="stat-box">
+                    <div class="stat-val ${occClass(occ)}">${fmtPct(occ)}</div>
+                    <div class="stat-lbl">Occupancy</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">${fmtAdr(y.adr_with_comps)}</div>
+                    <div class="stat-lbl">ADR</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">${fmt$(y.room_revenue)}</div>
+                    <div class="stat-lbl">Room Rev</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">${fmt$(y.total_revenue)}</div>
+                    <div class="stat-lbl">Total Rev</div>
+                </div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    // MTD table
+    const tbody = document.getElementById('mtd-table');
+    tbody.innerHTML = '';
+    data.hotels.forEach(h => {
+        const m = h.mtd;
+        const occ = m.avg_occ;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="td-hotel">${h.name}</td>
+            <td>${m.days || '—'}</td>
+            <td class="${occ >= 75 ? 'td-good' : occ >= 55 ? 'td-warn' : 'td-bad'}">${fmtPct(occ)}</td>
+            <td>${fmtAdr(m.avg_adr)}</td>
+            <td>${fmt$(m.room_rev)}</td>
+            <td>${fmt$(m.total_rev)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Chart
+    buildChart('occ');
+
+    // Footer
+    document.getElementById('footer').textContent = 'Updated ' + data.generated_at;
+}
+
+function buildChart(metric) {
+    currentMetric = metric;
+    const data = allData;
+    if (!data) return;
+
+    const labels = data.hotels[0].trend_30d.map(r => {
+        const d = new Date(r.report_date + 'T12:00:00');
+        return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    });
+
+    const datasets = data.hotels.map((h, i) => {
+        const vals = h.trend_30d.map(r =>
+            metric === 'occ' ? r.occupancy_pct :
+            metric === 'rev' ? r.revenue :
+            r.adr
+        );
+        return {
+            label: h.name,
+            data: vals,
+            borderColor: HOTEL_COLORS[i].line,
+            backgroundColor: HOTEL_COLORS[i].fill,
+            borderWidth: 2,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            fill: false,
+            tension: 0.3,
+        };
+    });
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 }, boxWidth: 12 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(10,15,10,0.9)',
+                    borderColor: 'rgba(0,212,170,0.3)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: ctx => {
+                            const v = ctx.parsed.y;
+                            if (metric === 'occ') return ` ${ctx.dataset.label}: ${v?.toFixed(1)}%`;
+                            if (metric === 'rev') return ` ${ctx.dataset.label}: $${v?.toLocaleString()}`;
+                            return ` ${ctx.dataset.label}: $${v?.toFixed(2)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: 'rgba(255,255,255,0.35)', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                },
+                y: {
+                    ticks: {
+                        color: 'rgba(255,255,255,0.35)',
+                        callback: v => metric === 'occ' ? v + '%' : metric === 'rev' ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v
+                    },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                }
+            }
+        }
+    });
+}
+
+function switchChart(metric, btn) {
+    document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    buildChart(metric);
+}
+
+// Load data
+fetch('data.json?v=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        render(data);
+    })
+    .catch(err => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error-msg').style.display = 'block';
+        document.getElementById('error-msg').textContent = 'Could not load data: ' + err.message;
+    });
+
+// Refresh every 10 minutes
+setInterval(() => {
+    fetch('data.json?v=' + Date.now())
+        .then(r => r.json())
+        .then(render)
+        .catch(() => {});
+}, 600000);
+</script>
+</body>
+</html>
