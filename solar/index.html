@@ -195,6 +195,39 @@
         .ev-label { font-size: 0.9rem; color: rgba(255,255,255,0.7); }
         .ev-kwh   { font-size: 0.8rem; color: rgba(255,255,255,0.35); }
 
+        /* ── Apply button ── */
+        .apply-section {
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .apply-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: linear-gradient(135deg, #e94560, #c73652);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            width: 100%;
+            justify-content: center;
+        }
+        .apply-btn:hover  { opacity: 0.9; }
+        .apply-btn:active { transform: scale(0.98); }
+        .apply-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .apply-status {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            min-height: 1.2rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .apply-status.success { color: #34d399; }
+        .apply-status.error   { color: #f87171; }
+
         /* ── Footer ── */
         footer {
             text-align: center;
@@ -244,6 +277,10 @@ async function load() {
         app.innerHTML = `<div class="state-box"><h2>Could not load data</h2><p>${e.message}</p></div>`;
         return;
     }
+
+    // Inject agent config from data.json
+    window._agentUrl = data.agent_url || '';
+    window._agentKey = data.agent_key || '';
 
     if (data.status === 'pending') {
         app.innerHTML = `<div class="state-box"><h2>⏳ ${data.message}</h2><p>Check back after 7 PM</p></div>`;
@@ -338,6 +375,16 @@ async function load() {
                 <span class="label">Annual run rate</span>
                 <span class="amount green" id="saving-annual">$${s.annual_savings}</span>
             </div>
+        <!-- Apply button -->
+        <div class="apply-section">
+            <button class="apply-btn" id="apply-btn" onclick="applySettings()">
+                ⚡ Apply Tonight's Settings to Sol-Ark
+            </button>
+            <div class="apply-status" id="apply-status">
+                Settings will be written to both inverters
+            </div>
+        </div>
+
         </div>
     `;
 
@@ -392,6 +439,58 @@ async function load() {
         document.getElementById('ev-kwh').textContent   = evOn ? '— 30 kWh' : '— saving 30 kWh';
         recalc();
     });
+}
+
+// ── Apply settings to inverter ───────────────────────────────────────────────
+// Agent URL is injected at deploy time via data.json
+async function applySettings() {
+    const btn    = document.getElementById('apply-btn');
+    const status = document.getElementById('apply-status');
+
+    // Get current target SOC from the live recalc
+    const heroText = document.getElementById('hero-soc')?.textContent || '';
+    const targetSoc = parseInt(heroText);
+    if (!targetSoc || isNaN(targetSoc)) {
+        status.textContent = '❌ Could not read charge target — reload the page';
+        status.className = 'apply-status error';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Applying…';
+    status.textContent = `Writing ${targetSoc}% charge limit to both inverters...`;
+    status.className = 'apply-status';
+
+    try {
+        const agentUrl = window._agentUrl;
+        if (!agentUrl || agentUrl.includes('YOUR-TUNNEL')) {
+            throw new Error('Agent not configured yet — Pi not set up');
+        }
+
+        const resp = await fetch(`${agentUrl}/apply`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Agent-Key': window._agentKey || '',
+            },
+            body: JSON.stringify({ target_soc_pct: targetSoc }),
+        });
+
+        const result = await resp.json();
+        if (result.success) {
+            btn.textContent = `✅ Applied — ${targetSoc}% set on both inverters`;
+            status.textContent = result.results.map(r =>
+                `${r.name}: ${r.confirmed}% confirmed`).join(' · ');
+            status.className = 'apply-status success';
+        } else {
+            throw new Error(result.results?.map(r => r.error).join(', ') || 'Write failed');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '⚡ Apply Tonight\'s Settings to Sol-Ark';
+        status.textContent = `❌ ${e.message}`;
+        status.className = 'apply-status error';
+    }
 }
 
 load();
