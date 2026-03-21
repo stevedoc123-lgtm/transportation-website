@@ -6,6 +6,49 @@
     <title>Hotel Portfolio — Bold HG</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
+        /* ── Password Gate ── */
+        #gate {
+            position: fixed; inset: 0;
+            background: linear-gradient(135deg, #0a0f0a 0%, #0d1f1a 50%, #0a1a16 100%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        #gate.hidden { display: none; }
+        .gate-box {
+            background: rgba(0,212,170,0.07);
+            border: 2px solid rgba(0,212,170,0.35);
+            border-radius: 20px;
+            padding: 2.5rem;
+            text-align: center;
+            width: 340px;
+        }
+        .gate-box h2 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #00d4aa, #00f5c8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .gate-box p { color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .gate-box input {
+            width: 100%; padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px; color: #fff;
+            font-size: 1rem; outline: none;
+            margin-bottom: 1rem;
+        }
+        .gate-box input:focus { border-color: rgba(0,212,170,0.5); }
+        .gate-btn {
+            width: 100%; padding: 0.75rem;
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            border: none; border-radius: 10px;
+            color: #000; font-weight: 700; font-size: 1rem;
+            cursor: pointer;
+        }
+        .gate-btn:hover { opacity: 0.9; }
+        .gate-error { color: #ef476f; font-size: 0.8rem; margin-top: 0.75rem; display: none; }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -215,6 +258,17 @@
     </style>
 </head>
 <body>
+<!-- Password Gate -->
+<div id="gate">
+    <div class="gate-box">
+        <h2>Hotel Portfolio</h2>
+        <p>This dashboard is private. Enter the password to continue.</p>
+        <input type="password" id="gate-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPass()">
+        <button class="gate-btn" onclick="checkPass()">Enter</button>
+        <div class="gate-error" id="gate-error">Incorrect password. Try again.</div>
+    </div>
+</div>
+
 <div class="container">
     <header>
         <h1>Hotel Portfolio</h1>
@@ -297,6 +351,30 @@ const HOTEL_COLORS = [
     { line: '#a29bfe', fill: 'rgba(162,155,254,0.12)' },
     { line: '#ffd166', fill: 'rgba(255,209,102,0.12)' },
 ];
+
+// ── Password gate ──
+const PASS_HASH = '7a4c9d2e8f1b6a3d5e0c7f9b2a4e8d1c6f3b5a9e2d7c4f0b8a1e6d3c9f5b2a7';
+
+async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPass() {
+    const val = document.getElementById('gate-input').value;
+    const hash = await sha256(val);
+    if (val === atob('c3RldmVpc2FuYWlnb2Q=')) {
+        sessionStorage.setItem('hotel_auth', '1');
+        document.getElementById('gate').classList.add('hidden');
+    } else {
+        document.getElementById('gate-error').style.display = 'block';
+        document.getElementById('gate-input').value = '';
+    }
+}
+
+if (sessionStorage.getItem('hotel_auth') === '1') {
+    document.getElementById('gate').classList.add('hidden');
+}
 
 let chartInstance = null;
 let allData = null;
