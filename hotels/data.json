@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-03-24 17:38",
+  "generated_at": "2026-03-24 17:47",
   "as_of_date": "2026-03-23",
   "portfolio": {
     "yesterday_revenue": 27215.35,
     "yesterday_avg_occupancy": 78.3,
-    "mtd_revenue": 670693.48
+    "mtd_revenue": 682436.24
   },
   "hotels": [
     {
@@ -27,16 +27,16 @@
       },
       "revpar": 41.33,
       "mtd": {
-        "avg_occ": 87.0,
-        "avg_adr": 62.01,
-        "total_rev": 164722.78,
-        "room_rev": 142267.59,
-        "days": 22
+        "avg_occ": 86.5,
+        "avg_adr": 61.79,
+        "total_rev": 171053.51,
+        "room_rev": 147391.93,
+        "days": 23
       },
       "last_7d": {
-        "avg_occ": 84.6,
-        "avg_adr": 59.97,
-        "total_rev": 45737.77
+        "avg_occ": 83.5,
+        "avg_adr": 59.54,
+        "total_rev": 52068.5
       },
       "trend_30d": [
         {
@@ -2278,6 +2278,13 @@
           "adr": 71.89,
           "revenue": 10195.84,
           "room_revenue": 8770.12
+        },
+        {
+          "report_date": "2026-03-22",
+          "occupancy_pct": 76.9,
+          "adr": 56.94,
+          "revenue": 6330.73,
+          "room_revenue": 5124.34
         },
         {
           "report_date": "2026-03-23",
@@ -4631,16 +4638,16 @@
       },
       "revpar": 41.53,
       "mtd": {
-        "avg_occ": 69.3,
-        "avg_adr": 61.55,
-        "total_rev": 133138.83,
-        "room_rev": 116543.29,
-        "days": 21
+        "avg_occ": 69.0,
+        "avg_adr": 61.38,
+        "total_rev": 138550.86,
+        "room_rev": 121235.5,
+        "days": 22
       },
       "last_7d": {
-        "avg_occ": 74.7,
-        "avg_adr": 61.56,
-        "total_rev": 40739.38
+        "avg_occ": 72.9,
+        "avg_adr": 61.04,
+        "total_rev": 46151.41
       },
       "trend_30d": [
         {
@@ -6819,6 +6826,13 @@
           "adr": 62.32,
           "revenue": 7483.88,
           "room_revenue": 6668.02
+        },
+        {
+          "report_date": "2026-03-22",
+          "occupancy_pct": 62.3,
+          "adr": 57.93,
+          "revenue": 5412.03,
+          "room_revenue": 4692.21
         },
         {
           "report_date": "2026-03-23",
