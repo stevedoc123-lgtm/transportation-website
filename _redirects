@@ -1,9 +1,9 @@
 /success /success.html 200
 /success.html /success.html 200
+/vehicles/ /vehicles/index.html 200!
+/vehicles/check /vehicles/check.html 200!
+/vehicles/check.html /vehicles/check.html 200!
+/vehicles/success /vehicles/success.html 200!
+/vehicles/success.html /vehicles/success.html 200!
 /solar/* /solar/index.html 200
-/vehicles/ /vehicles/index.html 200
-/vehicles/check /vehicles/check.html 200
-/vehicles/check.html /vehicles/check.html 200
-/vehicles/success /vehicles/success.html 200
-/vehicles/success.html /vehicles/success.html 200
 /* /index.html 200
