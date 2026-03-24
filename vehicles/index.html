@@ -74,6 +74,11 @@
         .lightbox.visible { display: flex; }
         .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
 
+        /* Toast notification */
+        .toast { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 14px 24px; border-radius: 12px; font-weight: 600; z-index: 3000; transform: translateX(120%); transition: transform 0.3s ease; }
+        .toast.visible { transform: translateX(0); }
+        .toast.error { background: #e94560; }
+
         /* Empty state */
         .empty-state { text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); }
         .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
@@ -136,6 +141,9 @@
     <div class="lightbox" id="lightbox">
         <img id="lightbox-img" src="">
     </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -326,24 +334,38 @@
             document.getElementById('lightbox').classList.add('visible');
         }
 
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast visible' + (isError ? ' error' : '');
+            setTimeout(() => { toast.classList.remove('visible'); }, 3000);
+        }
+
         async function addProduction() {
             const input = document.getElementById('new-production-name');
+            const btn = document.getElementById('add-production-btn');
             const name = input.value.trim();
             if (!name) return;
 
-            const { data, error } = await supabase.from('productions').insert({ name }).select().single();
-            if (error) {
-                alert('Error: ' + error.message);
-                return;
-            }
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
 
-            const select = document.getElementById('production-filter');
-            const opt = document.createElement('option');
-            opt.value = data.id;
-            opt.textContent = data.name;
-            select.appendChild(opt);
-            input.value = '';
-            alert(`Production "${name}" added! It will now appear in the check form.`);
+            try {
+                const { data, error } = await supabase.from('productions').insert({ name }).select().single();
+                if (error) throw error;
+
+                const select = document.getElementById('production-filter');
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.name;
+                select.appendChild(opt);
+                input.value = '';
+                showToast('Production "' + name + '" added!');
+            } catch (err) {
+                showToast('Error: ' + err.message, true);
+            }
+            btn.disabled = false;
+            btn.textContent = 'Add Production';
         }
     </script>
 </body>

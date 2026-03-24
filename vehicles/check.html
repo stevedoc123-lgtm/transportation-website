@@ -37,7 +37,7 @@
         .photo-upload { position: relative; border: 2px dashed rgba(233, 69, 96, 0.4); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .photo-upload:hover { border-color: #e94560; background: rgba(233, 69, 96, 0.05); }
         .photo-upload.has-photo { border-style: solid; border-color: #28a745; }
-        .photo-upload input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .photo-upload input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; -webkit-appearance: none; }
         .photo-upload .icon { font-size: 2rem; margin-bottom: 0.5rem; }
         .photo-upload .label { font-size: 0.85rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
         .photo-upload img { max-width: 100%; max-height: 120px; border-radius: 8px; object-fit: cover; }
@@ -148,25 +148,25 @@
                 <h3 class="section-title">Vehicle / Trailer Photos</h3>
                 <div class="photo-grid">
                     <div class="photo-upload" id="upload-front">
-                        <input type="file" accept="image/*" capture="environment" data-field="photo_front">
+                        <input type="file" accept="image/*" data-field="photo_front">
                         <div class="icon">&#128247;</div>
                         <div class="label">Front</div>
                         <button type="button" class="remove-btn">&times;</button>
                     </div>
                     <div class="photo-upload" id="upload-left">
-                        <input type="file" accept="image/*" capture="environment" data-field="photo_left">
+                        <input type="file" accept="image/*" data-field="photo_left">
                         <div class="icon">&#128247;</div>
                         <div class="label">Left Side</div>
                         <button type="button" class="remove-btn">&times;</button>
                     </div>
                     <div class="photo-upload" id="upload-right">
-                        <input type="file" accept="image/*" capture="environment" data-field="photo_right">
+                        <input type="file" accept="image/*" data-field="photo_right">
                         <div class="icon">&#128247;</div>
                         <div class="label">Right Side</div>
                         <button type="button" class="remove-btn">&times;</button>
                     </div>
                     <div class="photo-upload" id="upload-rear">
-                        <input type="file" accept="image/*" capture="environment" data-field="photo_rear">
+                        <input type="file" accept="image/*" data-field="photo_rear">
                         <div class="icon">&#128247;</div>
                         <div class="label">Rear</div>
                         <button type="button" class="remove-btn">&times;</button>
@@ -188,19 +188,19 @@
                 <div class="conditional" id="damage-section">
                     <div class="photo-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 1.5rem;">
                         <div class="photo-upload" id="upload-damage-1">
-                            <input type="file" accept="image/*" capture="environment" data-field="damage_photo_1">
+                            <input type="file" accept="image/*" data-field="damage_photo_1">
                             <div class="icon">&#128247;</div>
                             <div class="label">Damage 1</div>
                             <button type="button" class="remove-btn">&times;</button>
                         </div>
                         <div class="photo-upload" id="upload-damage-2">
-                            <input type="file" accept="image/*" capture="environment" data-field="damage_photo_2">
+                            <input type="file" accept="image/*" data-field="damage_photo_2">
                             <div class="icon">&#128247;</div>
                             <div class="label">Damage 2</div>
                             <button type="button" class="remove-btn">&times;</button>
                         </div>
                         <div class="photo-upload" id="upload-damage-3">
-                            <input type="file" accept="image/*" capture="environment" data-field="damage_photo_3">
+                            <input type="file" accept="image/*" data-field="damage_photo_3">
                             <div class="icon">&#128247;</div>
                             <div class="label">Damage 3</div>
                             <button type="button" class="remove-btn">&times;</button>
@@ -232,7 +232,7 @@
 
                 <div class="conditional" id="registration-section">
                     <div class="photo-upload" style="margin-bottom: 1.5rem;" id="upload-registration">
-                        <input type="file" accept="image/*" capture="environment" data-field="registration_photo">
+                        <input type="file" accept="image/*" data-field="registration_photo">
                         <div class="icon">&#128196;</div>
                         <div class="label">Upload Registration</div>
                         <button type="button" class="remove-btn">&times;</button>
@@ -250,7 +250,7 @@
 
                 <div class="conditional" id="inspection-section">
                     <div class="photo-upload" style="margin-bottom: 1.5rem;" id="upload-inspection">
-                        <input type="file" accept="image/*" capture="environment" data-field="inspection_photo">
+                        <input type="file" accept="image/*" data-field="inspection_photo">
                         <div class="icon">&#128196;</div>
                         <div class="label">Upload Annual Inspection</div>
                         <button type="button" class="remove-btn">&times;</button>
@@ -279,20 +279,31 @@
             document.querySelector('[name="check_date"]').valueAsDate = new Date();
 
             // Load productions
-            const { data: productions } = await supabase
-                .from('productions')
-                .select('*')
-                .eq('status', 'active')
-                .order('name');
+            try {
+                const { data: productions, error } = await supabase
+                    .from('productions')
+                    .select('*')
+                    .eq('status', 'active')
+                    .order('name');
 
-            const select = document.getElementById('production-select');
-            if (productions) {
-                productions.forEach(p => {
+                if (error) console.error('Failed to load productions:', error);
+
+                const select = document.getElementById('production-select');
+                if (productions && productions.length > 0) {
+                    productions.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = p.name;
+                        select.appendChild(opt);
+                    });
+                } else {
                     const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
+                    opt.value = '';
+                    opt.textContent = 'No productions yet — add one from the dashboard';
                     select.appendChild(opt);
-                });
+                }
+            } catch (err) {
+                console.error('Supabase connection error:', err);
             }
 
             // Set up conditional visibility
