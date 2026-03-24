@@ -14,6 +14,21 @@
   status = 200
 
 [[redirects]]
+  from = "/vehicles/"
+  to = "/vehicles/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/vehicles/check"
+  to = "/vehicles/check.html"
+  status = 200
+
+[[redirects]]
+  from = "/vehicles/success"
+  to = "/vehicles/success.html"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
