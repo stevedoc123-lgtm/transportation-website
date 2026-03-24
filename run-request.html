@@ -158,51 +158,10 @@
         </div>
     </div>
     <script>
-        document.querySelector('form').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        document.querySelector('form').addEventListener('submit', function(e) {
             const btn = document.getElementById('submit-btn');
             btn.textContent = 'Sending...';
             btn.disabled = true;
-            
-            const formData = new FormData(this);
-            const data = {};
-            for (let [key, value] of formData.entries()) {
-                if (data[key]) {
-                    data[key] = Array.isArray(data[key]) ? [...data[key], value] : [data[key], value];
-                } else {
-                    data[key] = value;
-                }
-            }
-            
-            // Send Discord notification
-            try {
-                await fetch('https://discord.com/api/webhooks/1481812099259826370/I__eWBIYtXWDF39iylv9iNBlG6sJIUxegIT0fmIMoHO-2Ukj8GYaHfEUXju-BLW6_lpT', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        embeds: [{
-                            title: '🚛 New Run Request',
-                            color: 0xe94560,
-                            timestamp: new Date().toISOString(),
-                            fields: [
-                                { name: 'Requestor', value: data.requestor_name || 'Unknown', inline: true },
-                                { name: 'Department', value: data.department || 'Unknown', inline: true },
-                                { name: 'Type', value: Array.isArray(data['request_type[]']) ? data['request_type[]'].join(', ') : data['request_type[]'] || 'N/A', inline: true },
-                                { name: 'Date Needed', value: data.date_needed || 'N/A', inline: true },
-                                { name: 'Time Needed', value: data.time_needed || 'N/A', inline: true },
-                                { name: 'Pickup', value: String(data.pickup_contact || 'N/A').substring(0, 1000) },
-                                { name: 'Delivery', value: String(data.delivery_contact || 'N/A').substring(0, 1000) }
-                            ],
-                            footer: { text: 'FilmTranspo.com' }
-                        }]
-                    })
-                });
-            } catch (err) {
-                console.error('Discord failed:', err);
-            }
-            
-            // Now submit the form
-            this.submit();
         });
     </script>
 </body>
