@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Dashboard | Film Transportation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%); min-height: 100vh; color: #fff; padding-bottom: 3rem; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+        header { padding: 1.5rem 0; border-bottom: 1px solid rgba(233, 69, 96, 0.3); margin-bottom: 2rem; }
+        nav { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .nav-right { display: flex; gap: 1rem; align-items: center; }
+        .nav-right a { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; }
+        .nav-right a:hover { color: #e94560; }
+        .page-header { text-align: center; margin-bottom: 2rem; }
+        .page-header h1 { font-size: 2.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.5rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .page-header p { color: rgba(255,255,255,0.6); }
+        @media (max-width: 600px) { .page-header h1 { font-size: 1.8rem; } }
+
+        /* Controls bar */
+        .controls { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center; }
+        .controls select, .controls input { padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 10px; color: #fff; font-size: 1rem; }
+        .controls select option { background: #1a1a2e; }
+        .controls select:focus, .controls input:focus { outline: none; border-color: #e94560; }
+        .controls input { flex: 1; min-width: 200px; }
+        .btn-new { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; padding: 12px 24px; border: none; border-radius: 50px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; text-decoration: none; font-size: 0.9rem; white-space: nowrap; transition: all 0.3s; }
+        .btn-new:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4); }
+
+        /* Production management */
+        .manage-row { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .manage-row input { flex: 1; min-width: 200px; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; }
+        .manage-row input:focus { outline: none; border-color: #e94560; }
+        .btn-small { padding: 10px 18px; background: rgba(233, 69, 96, 0.2); border: 1px solid #e94560; border-radius: 10px; color: #e94560; cursor: pointer; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; transition: all 0.3s; }
+        .btn-small:hover { background: #e94560; color: #fff; }
+
+        /* Vehicle cards */
+        .vehicle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .vehicle-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(233, 69, 96, 0.2); border-radius: 16px; padding: 1.5rem; transition: all 0.3s; cursor: pointer; }
+        .vehicle-card:hover { border-color: #e94560; transform: translateY(-4px); box-shadow: 0 10px 30px rgba(233, 69, 96, 0.15); }
+        .vehicle-card .unit { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 0.3rem; }
+        .vehicle-card .vendor { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.8rem; }
+        .vehicle-card .meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .badge-out { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
+        .badge-in { background: rgba(108, 117, 125, 0.2); color: #adb5bd; border: 1px solid rgba(108, 117, 125, 0.3); }
+        .badge-damage { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+        .badge-checks { background: rgba(233, 69, 96, 0.15); color: rgba(255,255,255,0.7); border: 1px solid rgba(233, 69, 96, 0.2); }
+
+        /* Vehicle detail modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto; padding: 2rem; }
+        .modal-overlay.visible { display: block; }
+        .modal { max-width: 800px; margin: 0 auto; background: linear-gradient(135deg, #0a0a0f, #1a1a2e); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 20px; padding: 2rem; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .modal-header h2 { font-size: 1.8rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .modal-close { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 2rem; cursor: pointer; }
+        .modal-close:hover { color: #e94560; }
+
+        /* Check history in modal */
+        .check-record { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+        .check-record.has-damage { border-color: rgba(255, 193, 7, 0.4); }
+        .check-record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .check-record-header h3 { font-size: 1.1rem; }
+        .check-record .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; }
+        .check-record .info-grid .label { color: rgba(255,255,255,0.5); }
+        .check-record .photos { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .check-record .photos img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: all 0.3s; }
+        .check-record .photos img:hover { border-color: #e94560; transform: scale(1.05); }
+        .damage-note { background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; padding: 0.8rem 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.8); }
+
+        /* Photo lightbox */
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; cursor: pointer; }
+        .lightbox.visible { display: flex; }
+        .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.5); }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 3rem; color: rgba(255,255,255,0.5); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="logo">Film Transpo</a>
+                <div class="nav-right">
+                    <a href="/">← Home</a>
+                    <a href="/vehicles/check.html" class="btn-new">+ New Check</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Vehicle Dashboard</h1>
+            <p>Track all vehicles and trailers across productions</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <select id="production-filter">
+                <option value="">All Productions</option>
+            </select>
+            <input type="text" id="search-input" placeholder="Search by unit #, vendor, or tag...">
+        </div>
+
+        <!-- Add production -->
+        <div class="manage-row">
+            <input type="text" id="new-production-name" placeholder="Add a new production (e.g. Tulsa King S4)">
+            <button class="btn-small" id="add-production-btn">Add Production</button>
+        </div>
+
+        <!-- Vehicle grid -->
+        <div id="vehicle-grid" class="vehicle-grid">
+            <div class="loading">Loading vehicles...</div>
+        </div>
+    </div>
+
+    <!-- Vehicle detail modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Unit #</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Photo lightbox -->
+    <div class="lightbox" id="lightbox">
+        <img id="lightbox-img" src="">
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allChecks = [];
+        let productions = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadProductions();
+            await loadVehicles();
+
+            // URL params for deep linking
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('unit') && params.get('prod')) {
+                document.getElementById('production-filter').value = params.get('prod');
+                document.getElementById('search-input').value = params.get('unit');
+                filterAndRender();
+                openVehicleDetail(params.get('unit'), params.get('prod'));
+            }
+
+            // Event listeners
+            document.getElementById('production-filter').addEventListener('change', filterAndRender);
+            document.getElementById('search-input').addEventListener('input', filterAndRender);
+            document.getElementById('add-production-btn').addEventListener('click', addProduction);
+            document.getElementById('modal-close').addEventListener('click', closeModal);
+            document.getElementById('modal-overlay').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('modal-overlay')) closeModal();
+            });
+            document.getElementById('lightbox').addEventListener('click', () => {
+                document.getElementById('lightbox').classList.remove('visible');
+            });
+        });
+
+        async function loadProductions() {
+            const { data } = await supabase.from('productions').select('*').order('name');
+            productions = data || [];
+            const select = document.getElementById('production-filter');
+            productions.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name + (p.status === 'archived' ? ' (archived)' : '');
+                select.appendChild(opt);
+            });
+        }
+
+        async function loadVehicles() {
+            const { data } = await supabase
+                .from('vehicle_checks')
+                .select('*, productions(name)')
+                .order('created_at', { ascending: false });
+            allChecks = data || [];
+            filterAndRender();
+        }
+
+        function filterAndRender() {
+            const prodFilter = document.getElementById('production-filter').value;
+            const search = document.getElementById('search-input').value.toLowerCase().trim();
+
+            let filtered = allChecks;
+            if (prodFilter) filtered = filtered.filter(c => c.production_id === prodFilter);
+            if (search) filtered = filtered.filter(c =>
+                c.unit_number.toLowerCase().includes(search) ||
+                c.vendor.toLowerCase().includes(search) ||
+                c.tag_number.toLowerCase().includes(search)
+            );
+
+            // Group by unit_number + production_id
+            const vehicles = {};
+            filtered.forEach(check => {
+                const key = `${check.unit_number}__${check.production_id}`;
+                if (!vehicles[key]) {
+                    vehicles[key] = {
+                        unit_number: check.unit_number,
+                        production_id: check.production_id,
+                        production_name: check.productions?.name || 'Unknown',
+                        vendor: check.vendor,
+                        checks: [],
+                        has_damage: false,
+                        latest_type: null
+                    };
+                }
+                vehicles[key].checks.push(check);
+                if (check.has_damage) vehicles[key].has_damage = true;
+            });
+
+            // Sort by most recent activity and set latest type
+            Object.values(vehicles).forEach(v => {
+                v.checks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                v.latest_type = v.checks[0].check_type;
+            });
+
+            renderGrid(Object.values(vehicles));
+        }
+
+        function renderGrid(vehicles) {
+            const grid = document.getElementById('vehicle-grid');
+
+            if (vehicles.length === 0) {
+                grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">
+                    <div class="icon">&#128663;</div>
+                    <h3>No vehicles found</h3>
+                    <p style="margin-top:0.5rem;">Start by <a href="/vehicles/check.html" style="color:#e94560;">checking out a vehicle</a>.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = vehicles.map(v => `
+                <div class="vehicle-card" onclick="openVehicleDetail('${v.unit_number.replace(/'/g, "\\'")}', '${v.production_id}')">
+                    <div class="unit">Unit #${v.unit_number}</div>
+                    <div class="vendor">${v.vendor} — ${v.production_name}</div>
+                    <div class="meta">
+                        <span class="badge ${v.latest_type === 'OUT' ? 'badge-out' : 'badge-in'}">${v.latest_type === 'OUT' ? 'Checked Out' : v.latest_type === 'IN' ? 'Returned' : 'DOT Update'}</span>
+                        ${v.has_damage ? '<span class="badge badge-damage">Damage Noted</span>' : ''}
+                        <span class="badge badge-checks">${v.checks.length} check${v.checks.length > 1 ? 's' : ''}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function openVehicleDetail(unitNumber, productionId) {
+            const modal = document.getElementById('modal-overlay');
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+
+            title.textContent = `Unit #${unitNumber}`;
+            body.innerHTML = '<div class="loading">Loading history...</div>';
+            modal.classList.add('visible');
+
+            const { data: checks } = await supabase
+                .from('vehicle_checks')
+                .select('*')
+                .eq('unit_number', unitNumber)
+                .eq('production_id', productionId)
+                .order('check_date', { ascending: false });
+
+            if (!checks || checks.length === 0) {
+                body.innerHTML = '<p>No records found.</p>';
+                return;
+            }
+
+            body.innerHTML = checks.map(check => {
+                const photos = [
+                    { url: check.photo_front, label: 'Front' },
+                    { url: check.photo_left, label: 'Left' },
+                    { url: check.photo_right, label: 'Right' },
+                    { url: check.photo_rear, label: 'Rear' },
+                    { url: check.damage_photo_1, label: 'Damage 1' },
+                    { url: check.damage_photo_2, label: 'Damage 2' },
+                    { url: check.damage_photo_3, label: 'Damage 3' },
+                    { url: check.registration_photo, label: 'Registration' },
+                    { url: check.inspection_photo, label: 'Inspection' },
+                ].filter(p => p.url);
+
+                return `
+                <div class="check-record ${check.has_damage ? 'has-damage' : ''}">
+                    <div class="check-record-header">
+                        <h3>Check ${check.check_type} — ${check.check_date}</h3>
+                        <span class="badge ${check.check_type === 'OUT' ? 'badge-out' : 'badge-in'}">${check.check_type}</span>
+                    </div>
+                    <div class="info-grid">
+                        <div><span class="label">Name:</span> ${check.first_name} ${check.last_name}</div>
+                        <div><span class="label">Vendor:</span> ${check.vendor}</div>
+                        <div><span class="label">Tag:</span> ${check.tag_number}</div>
+                        <div><span class="label">Odometer:</span> ${check.odometer}</div>
+                        <div><span class="label">Registration:</span> ${check.has_registration ? 'Yes' : 'No'}</div>
+                        <div><span class="label">Inspection:</span> ${check.has_inspection || 'N/A'}</div>
+                    </div>
+                    ${check.has_damage ? `<div class="damage-note">&#9888; <strong>Damage:</strong> ${check.damage_comments || 'No details provided'}</div>` : ''}
+                    ${photos.length > 0 ? `
+                        <div class="photos">
+                            ${photos.map(p => `<img src="${p.url}" alt="${p.label}" title="${p.label}" onclick="openLightbox('${p.url}')">`).join('')}
+                        </div>
+                    ` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('visible');
+        }
+
+        function openLightbox(url) {
+            event.stopPropagation();
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('lightbox').classList.add('visible');
+        }
+
+        async function addProduction() {
+            const input = document.getElementById('new-production-name');
+            const name = input.value.trim();
+            if (!name) return;
+
+            const { data, error } = await supabase.from('productions').insert({ name }).select().single();
+            if (error) {
+                alert('Error: ' + error.message);
+                return;
+            }
+
+            const select = document.getElementById('production-filter');
+            const opt = document.createElement('option');
+            opt.value = data.id;
+            opt.textContent = data.name;
+            select.appendChild(opt);
+            input.value = '';
+            alert(`Production "${name}" added! It will now appear in the check form.`);
+        }
+    </script>
+</body>
+</html>

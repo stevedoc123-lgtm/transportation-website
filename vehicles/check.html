@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Check OUT/IN | Film Transportation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%); min-height: 100vh; color: #fff; padding-bottom: 3rem; }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+        header { padding: 1.5rem 0; border-bottom: 1px solid rgba(233, 69, 96, 0.3); margin-bottom: 2rem; }
+        nav { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .back-link { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; }
+        .back-link:hover { color: #e94560; }
+        .page-header { text-align: center; margin-bottom: 3rem; }
+        .page-header h1 { font-size: 2.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.5rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .page-header p { color: rgba(255,255,255,0.6); }
+        .form-container { background: rgba(255,255,255,0.05); border: 1px solid rgba(233, 69, 96, 0.2); border-radius: 20px; padding: 3rem; backdrop-filter: blur(10px); }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 10px; color: #fff; font-size: 1rem; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #e94560; box-shadow: 0 0 20px rgba(233, 69, 96, 0.2); }
+        .form-group select option { background: #1a1a2e; color: #fff; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } .page-header h1 { font-size: 1.8rem; } .form-container { padding: 1.5rem; } }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 1rem; }
+        .checkbox-group label { display: flex; align-items: center; font-weight: normal; cursor: pointer; text-transform: none; font-size: 1rem; padding: 10px 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 10px; transition: all 0.3s; }
+        .checkbox-group label:has(input:checked) { background: rgba(233, 69, 96, 0.2); border-color: #e94560; }
+        .checkbox-group input { margin-right: 0.5rem; width: auto; accent-color: #e94560; }
+        .section-title { margin: 2.5rem 0 1.5rem; color: #e94560; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid rgba(233, 69, 96, 0.3); padding-bottom: 0.5rem; }
+        .required { color: #e94560; }
+
+        /* Photo upload */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 600px) { .photo-grid { grid-template-columns: 1fr; } }
+        .photo-upload { position: relative; border: 2px dashed rgba(233, 69, 96, 0.4); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .photo-upload:hover { border-color: #e94560; background: rgba(233, 69, 96, 0.05); }
+        .photo-upload.has-photo { border-style: solid; border-color: #28a745; }
+        .photo-upload input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .photo-upload .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .photo-upload .label { font-size: 0.85rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
+        .photo-upload img { max-width: 100%; max-height: 120px; border-radius: 8px; object-fit: cover; }
+        .photo-upload .remove-btn { position: absolute; top: 8px; right: 8px; background: #e94560; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 24px; display: none; }
+        .photo-upload.has-photo .remove-btn { display: block; }
+
+        /* Conditional sections */
+        .conditional { display: none; animation: fadeIn 0.3s ease; }
+        .conditional.visible { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Damage alert */
+        .damage-alert { background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.2)); border: 2px solid #ffc107; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: none; }
+        .damage-alert.visible { display: block; }
+        .damage-alert h3 { color: #ffc107; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .damage-alert p { color: rgba(255,255,255,0.8); font-size: 0.95rem; margin-bottom: 0.3rem; }
+        .damage-alert a { color: #ffc107; }
+
+        /* Submit button */
+        button[type="submit"] { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; padding: 18px 50px; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-transform: uppercase; cursor: pointer; width: 100%; transition: all 0.3s; margin-top: 2rem; }
+        button[type="submit"]:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(233, 69, 96, 0.4); }
+        button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Loading spinner */
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="logo">Film Transpo</a>
+                <a href="/vehicles/" class="back-link">← Vehicle Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Vehicle Check</h1>
+            <p>Check out or check in a vehicle / trailer</p>
+        </div>
+
+        <div class="form-container">
+            <div class="damage-alert" id="damage-alert">
+                <h3>&#9888; Prior Damage on Record</h3>
+                <p id="damage-alert-text"></p>
+            </div>
+
+            <form id="vehicle-check-form">
+                <h3 class="section-title">Basic Information</h3>
+
+                <div class="form-group">
+                    <label>Production <span class="required">*</span></label>
+                    <select name="production_id" id="production-select" required>
+                        <option value="">Select Production...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Checking <span class="required">*</span></label>
+                    <div class="checkbox-group">
+                        <label><input type="radio" name="check_type" value="OUT" required> OUT</label>
+                        <label><input type="radio" name="check_type" value="IN"> IN</label>
+                        <label><input type="radio" name="check_type" value="DOT"> UPDATING INFO FOR DOT</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Date <span class="required">*</span></label>
+                    <input type="date" name="check_date" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" name="first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" name="last_name" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Vendor <span class="required">*</span></label>
+                    <input type="text" name="vendor" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vehicle / Trailer Unit # <span class="required">*</span></label>
+                        <input type="text" name="unit_number" id="unit-number" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Tag # / License Plate <span class="required">*</span></label>
+                        <input type="text" name="tag_number" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Odometer Reading <span class="required">*</span></label>
+                    <input type="text" name="odometer" required>
+                </div>
+
+                <!-- Vehicle Photos -->
+                <h3 class="section-title">Vehicle / Trailer Photos</h3>
+                <div class="photo-grid">
+                    <div class="photo-upload" id="upload-front">
+                        <input type="file" accept="image/*" capture="environment" data-field="photo_front">
+                        <div class="icon">&#128247;</div>
+                        <div class="label">Front</div>
+                        <button type="button" class="remove-btn">&times;</button>
+                    </div>
+                    <div class="photo-upload" id="upload-left">
+                        <input type="file" accept="image/*" capture="environment" data-field="photo_left">
+                        <div class="icon">&#128247;</div>
+                        <div class="label">Left Side</div>
+                        <button type="button" class="remove-btn">&times;</button>
+                    </div>
+                    <div class="photo-upload" id="upload-right">
+                        <input type="file" accept="image/*" capture="environment" data-field="photo_right">
+                        <div class="icon">&#128247;</div>
+                        <div class="label">Right Side</div>
+                        <button type="button" class="remove-btn">&times;</button>
+                    </div>
+                    <div class="photo-upload" id="upload-rear">
+                        <input type="file" accept="image/*" capture="environment" data-field="photo_rear">
+                        <div class="icon">&#128247;</div>
+                        <div class="label">Rear</div>
+                        <button type="button" class="remove-btn">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Damage Section -->
+                <h3 class="section-title">Damage Assessment</h3>
+                <p style="color: rgba(255,255,255,0.6); margin-bottom: 1.5rem; font-size: 0.9rem;">THIS MUST BE NOTATED IF YOU SEE ANY — Make sure images and descriptions of any damage are clear.</p>
+
+                <div class="form-group">
+                    <label>Is there any damage on the vehicle / trailer? <span class="required">*</span></label>
+                    <div class="checkbox-group">
+                        <label><input type="radio" name="has_damage" value="true" required> YES</label>
+                        <label><input type="radio" name="has_damage" value="false"> NO</label>
+                    </div>
+                </div>
+
+                <div class="conditional" id="damage-section">
+                    <div class="photo-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 1.5rem;">
+                        <div class="photo-upload" id="upload-damage-1">
+                            <input type="file" accept="image/*" capture="environment" data-field="damage_photo_1">
+                            <div class="icon">&#128247;</div>
+                            <div class="label">Damage 1</div>
+                            <button type="button" class="remove-btn">&times;</button>
+                        </div>
+                        <div class="photo-upload" id="upload-damage-2">
+                            <input type="file" accept="image/*" capture="environment" data-field="damage_photo_2">
+                            <div class="icon">&#128247;</div>
+                            <div class="label">Damage 2</div>
+                            <button type="button" class="remove-btn">&times;</button>
+                        </div>
+                        <div class="photo-upload" id="upload-damage-3">
+                            <input type="file" accept="image/*" capture="environment" data-field="damage_photo_3">
+                            <div class="icon">&#128247;</div>
+                            <div class="label">Damage 3</div>
+                            <button type="button" class="remove-btn">&times;</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Describe the damage in detail <span class="required">*</span></label>
+                        <textarea name="damage_comments" rows="3" placeholder="Describe location, type, and severity of damage..."></textarea>
+                    </div>
+                </div>
+
+                <div class="conditional" id="no-damage-section">
+                    <div class="form-group">
+                        <label>Additional Comments</label>
+                        <textarea name="damage_comments_none" rows="2" placeholder="If none, write NONE">NONE</textarea>
+                    </div>
+                </div>
+
+                <!-- Documentation -->
+                <h3 class="section-title">Documentation</h3>
+
+                <div class="form-group">
+                    <label>Registration in vehicle / trailer? <span class="required">*</span></label>
+                    <div class="checkbox-group">
+                        <label><input type="radio" name="has_registration" value="true" required> YES</label>
+                        <label><input type="radio" name="has_registration" value="false"> NO</label>
+                    </div>
+                </div>
+
+                <div class="conditional" id="registration-section">
+                    <div class="photo-upload" style="margin-bottom: 1.5rem;" id="upload-registration">
+                        <input type="file" accept="image/*" capture="environment" data-field="registration_photo">
+                        <div class="icon">&#128196;</div>
+                        <div class="label">Upload Registration</div>
+                        <button type="button" class="remove-btn">&times;</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Annual inspection in vehicle / trailer? <span class="required">*</span></label>
+                    <div class="checkbox-group">
+                        <label><input type="radio" name="has_inspection" value="YES" required> YES</label>
+                        <label><input type="radio" name="has_inspection" value="NO"> NO</label>
+                        <label><input type="radio" name="has_inspection" value="NOT_REQUIRED"> NOT REQUIRED</label>
+                    </div>
+                </div>
+
+                <div class="conditional" id="inspection-section">
+                    <div class="photo-upload" style="margin-bottom: 1.5rem;" id="upload-inspection">
+                        <input type="file" accept="image/*" capture="environment" data-field="inspection_photo">
+                        <div class="icon">&#128196;</div>
+                        <div class="label">Upload Annual Inspection</div>
+                        <button type="button" class="remove-btn">&times;</button>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn">Submit Vehicle Check</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // ── Supabase Config ──
+        const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ── State ──
+        const photoData = {}; // field_name -> File
+        let debounceTimer = null;
+
+        // ── Init ──
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Set today's date
+            document.querySelector('[name="check_date"]').valueAsDate = new Date();
+
+            // Load productions
+            const { data: productions } = await supabase
+                .from('productions')
+                .select('*')
+                .eq('status', 'active')
+                .order('name');
+
+            const select = document.getElementById('production-select');
+            if (productions) {
+                productions.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    select.appendChild(opt);
+                });
+            }
+
+            // Set up conditional visibility
+            setupConditional('has_damage', { 'true': 'damage-section', 'false': 'no-damage-section' });
+            setupConditional('has_registration', { 'true': 'registration-section' });
+            setupConditional('has_inspection', { 'YES': 'inspection-section' });
+
+            // Set up photo uploads
+            document.querySelectorAll('.photo-upload input[type="file"]').forEach(input => {
+                input.addEventListener('change', handlePhotoSelect);
+            });
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', handlePhotoRemove);
+            });
+
+            // Damage alert on check-IN: look up unit when type changes
+            document.querySelectorAll('[name="check_type"]').forEach(radio => {
+                radio.addEventListener('change', checkForPriorDamage);
+            });
+            document.getElementById('unit-number').addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(checkForPriorDamage, 500);
+            });
+
+            // Form submit
+            document.getElementById('vehicle-check-form').addEventListener('submit', handleSubmit);
+        });
+
+        // ── Conditional field visibility ──
+        function setupConditional(radioName, valueToSectionMap) {
+            document.querySelectorAll(`[name="${radioName}"]`).forEach(radio => {
+                radio.addEventListener('change', () => {
+                    Object.entries(valueToSectionMap).forEach(([val, sectionId]) => {
+                        const section = document.getElementById(sectionId);
+                        if (section) section.classList.toggle('visible', radio.value === val && radio.checked);
+                    });
+                });
+            });
+        }
+
+        // ── Photo handling ──
+        function handlePhotoSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const field = e.target.dataset.field;
+            const container = e.target.closest('.photo-upload');
+
+            photoData[field] = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                container.querySelector('.icon').style.display = 'none';
+                container.querySelector('.label').style.display = 'none';
+                let img = container.querySelector('img');
+                if (!img) {
+                    img = document.createElement('img');
+                    container.insertBefore(img, container.querySelector('.remove-btn'));
+                }
+                img.src = ev.target.result;
+                container.classList.add('has-photo');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handlePhotoRemove(e) {
+            e.stopPropagation();
+            const container = e.target.closest('.photo-upload');
+            const input = container.querySelector('input[type="file"]');
+            const field = input.dataset.field;
+
+            delete photoData[field];
+            input.value = '';
+            const img = container.querySelector('img');
+            if (img) img.remove();
+            container.querySelector('.icon').style.display = '';
+            container.querySelector('.label').style.display = '';
+            container.classList.remove('has-photo');
+        }
+
+        // ── Damage alert for check-ins ──
+        async function checkForPriorDamage() {
+            const checkType = document.querySelector('[name="check_type"]:checked');
+            const unitNumber = document.getElementById('unit-number').value.trim();
+            const productionId = document.getElementById('production-select').value;
+            const alertEl = document.getElementById('damage-alert');
+            const alertText = document.getElementById('damage-alert-text');
+
+            if (!checkType || checkType.value !== 'IN' || !unitNumber || !productionId) {
+                alertEl.classList.remove('visible');
+                return;
+            }
+
+            const { data: priorChecks } = await supabase
+                .from('vehicle_checks')
+                .select('*')
+                .eq('production_id', productionId)
+                .eq('unit_number', unitNumber)
+                .eq('has_damage', true)
+                .order('check_date', { ascending: false });
+
+            if (priorChecks && priorChecks.length > 0) {
+                const latest = priorChecks[0];
+                const totalDamageRecords = priorChecks.length;
+                const photoCount = [latest.damage_photo_1, latest.damage_photo_2, latest.damage_photo_3].filter(Boolean).length;
+                alertText.innerHTML = `<strong>${totalDamageRecords} prior damage record(s)</strong> for unit ${unitNumber}.<br>` +
+                    `Most recent: ${latest.check_type} on ${latest.check_date} — "${latest.damage_comments || 'No details'}"<br>` +
+                    `${photoCount} damage photo(s) on file. <a href="/vehicles/?unit=${encodeURIComponent(unitNumber)}&prod=${productionId}">View full history →</a>`;
+                alertEl.classList.add('visible');
+            } else {
+                alertEl.classList.remove('visible');
+            }
+        }
+
+        // ── Upload a photo to Supabase Storage ──
+        async function uploadPhoto(field, file) {
+            const ext = file.name.split('.').pop();
+            const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${field}.${ext}`;
+
+            const { error } = await supabase.storage
+                .from('vehicle-photos')
+                .upload(path, file, { contentType: file.type });
+
+            if (error) throw new Error(`Photo upload failed (${field}): ${error.message}`);
+
+            const { data } = supabase.storage.from('vehicle-photos').getPublicUrl(path);
+            return data.publicUrl;
+        }
+
+        // ── Form submission ──
+        async function handleSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Uploading photos...';
+
+            try {
+                // Upload all photos
+                const photoUrls = {};
+                const photoFields = ['photo_front', 'photo_left', 'photo_right', 'photo_rear',
+                    'damage_photo_1', 'damage_photo_2', 'damage_photo_3',
+                    'registration_photo', 'inspection_photo'];
+
+                for (const field of photoFields) {
+                    if (photoData[field]) {
+                        photoUrls[field] = await uploadPhoto(field, photoData[field]);
+                    }
+                }
+
+                btn.innerHTML = '<span class="spinner"></span> Saving record...';
+
+                // Build record
+                const form = document.getElementById('vehicle-check-form');
+                const hasDamage = form.querySelector('[name="has_damage"]:checked')?.value === 'true';
+                const damageComments = hasDamage
+                    ? form.querySelector('[name="damage_comments"]').value
+                    : form.querySelector('[name="damage_comments_none"]').value;
+
+                const record = {
+                    production_id: form.querySelector('[name="production_id"]').value,
+                    check_type: form.querySelector('[name="check_type"]:checked').value,
+                    check_date: form.querySelector('[name="check_date"]').value,
+                    first_name: form.querySelector('[name="first_name"]').value.trim(),
+                    last_name: form.querySelector('[name="last_name"]').value.trim(),
+                    vendor: form.querySelector('[name="vendor"]').value.trim(),
+                    unit_number: form.querySelector('[name="unit_number"]').value.trim(),
+                    tag_number: form.querySelector('[name="tag_number"]').value.trim(),
+                    odometer: form.querySelector('[name="odometer"]').value.trim(),
+                    has_damage: hasDamage,
+                    damage_comments: damageComments,
+                    has_registration: form.querySelector('[name="has_registration"]:checked')?.value === 'true',
+                    has_inspection: form.querySelector('[name="has_inspection"]:checked')?.value,
+                    ...photoUrls
+                };
+
+                const { error } = await supabase.from('vehicle_checks').insert(record);
+                if (error) throw new Error(error.message);
+
+                // Success — redirect
+                window.location.href = '/vehicles/success.html';
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Submit Vehicle Check';
+            }
+        }
+    </script>
+</body>
+</html>
