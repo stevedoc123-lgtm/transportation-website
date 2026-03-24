@@ -267,7 +267,7 @@
         // ── Supabase Config ──
         const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ── State ──
         const photoData = {}; // field_name -> File
@@ -280,7 +280,7 @@
 
             // Load productions
             try {
-                const { data: productions, error } = await supabase
+                const { data: productions, error } = await db
                     .from('productions')
                     .select('*')
                     .eq('status', 'active')
@@ -397,7 +397,7 @@
                 return;
             }
 
-            const { data: priorChecks } = await supabase
+            const { data: priorChecks } = await db
                 .from('vehicle_checks')
                 .select('*')
                 .eq('production_id', productionId)
@@ -423,13 +423,13 @@
             const ext = file.name.split('.').pop();
             const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${field}.${ext}`;
 
-            const { error } = await supabase.storage
+            const { error } = await db.storage
                 .from('vehicle-photos')
                 .upload(path, file, { contentType: file.type });
 
             if (error) throw new Error(`Photo upload failed (${field}): ${error.message}`);
 
-            const { data } = supabase.storage.from('vehicle-photos').getPublicUrl(path);
+            const { data } = db.storage.from('vehicle-photos').getPublicUrl(path);
             return data.publicUrl;
         }
 
@@ -479,7 +479,7 @@
                     ...photoUrls
                 };
 
-                const { error } = await supabase.from('vehicle_checks').insert(record);
+                const { error } = await db.from('vehicle_checks').insert(record);
                 if (error) throw new Error(error.message);
 
                 // Success — redirect

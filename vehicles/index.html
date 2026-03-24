@@ -149,7 +149,7 @@
     <script>
         const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let allChecks = [];
         let productions = [];
@@ -181,7 +181,7 @@
         });
 
         async function loadProductions() {
-            const { data } = await supabase.from('productions').select('*').order('name');
+            const { data } = await db.from('productions').select('*').order('name');
             productions = data || [];
             const select = document.getElementById('production-filter');
             productions.forEach(p => {
@@ -193,7 +193,7 @@
         }
 
         async function loadVehicles() {
-            const { data } = await supabase
+            const { data } = await db
                 .from('vehicle_checks')
                 .select('*, productions(name)')
                 .order('created_at', { ascending: false });
@@ -275,7 +275,7 @@
             body.innerHTML = '<div class="loading">Loading history...</div>';
             modal.classList.add('visible');
 
-            const { data: checks } = await supabase
+            const { data: checks } = await db
                 .from('vehicle_checks')
                 .select('*')
                 .eq('unit_number', unitNumber)
@@ -351,7 +351,7 @@
             btn.textContent = 'Adding...';
 
             try {
-                const { data, error } = await supabase.from('productions').insert({ name }).select().single();
+                const { data, error } = await db.from('productions').insert({ name }).select().single();
                 if (error) throw error;
 
                 const select = document.getElementById('production-filter');
