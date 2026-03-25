@@ -8,6 +8,16 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%); min-height: 100vh; color: #fff; padding-bottom: 3rem; }
         .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+        /* Password gate */
+        .password-gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .password-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(233,69,96,0.3); border-radius: 20px; padding: 3rem; text-align: center; max-width: 400px; width: 100%; }
+        .password-box h2 { font-size: 1.5rem; margin-bottom: 1rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .password-box input { width: 100%; padding: 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233,69,96,0.3); border-radius: 10px; color: #fff; font-size: 1rem; text-align: center; margin-bottom: 1rem; }
+        .password-box input:focus { outline: none; border-color: #e94560; }
+        .password-box button { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; padding: 14px 40px; border: none; border-radius: 50px; font-weight: 700; text-transform: uppercase; cursor: pointer; width: 100%; font-size: 1rem; }
+        .password-box .error-msg { color: #e94560; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
+        .app-content { display: none; }
         header { padding: 1.5rem 0; border-bottom: 1px solid rgba(233,69,96,0.3); margin-bottom: 2rem; }
         nav { display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
@@ -77,6 +87,19 @@
     </style>
 </head>
 <body>
+    <!-- Password Gate -->
+    <div class="password-gate" id="password-gate">
+        <div class="password-box">
+            <h2>Calendar Editor</h2>
+            <p style="color:rgba(255,255,255,0.5); margin-bottom:1.5rem;">Enter password to access the editor</p>
+            <input type="password" id="password-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()">
+            <button onclick="checkPassword()">Enter</button>
+            <div class="error-msg" id="password-error">Incorrect password</div>
+        </div>
+    </div>
+
+    <!-- App Content (hidden until authenticated) -->
+    <div class="app-content" id="app-content">
     <header>
         <div class="container">
             <nav>
@@ -451,6 +474,29 @@
             toast.className = 'toast visible' + (isError ? ' error' : '');
             setTimeout(() => toast.classList.remove('visible'), 3000);
         }
+
+        // Password protection
+        const ADMIN_PASS = 'take1';
+
+        function checkPassword() {
+            const input = document.getElementById('password-input');
+            if (input.value === ADMIN_PASS) {
+                document.getElementById('password-gate').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                sessionStorage.setItem('calendar_auth', 'true');
+            } else {
+                document.getElementById('password-error').style.display = 'block';
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        // Check if already authenticated this session
+        if (sessionStorage.getItem('calendar_auth') === 'true') {
+            document.getElementById('password-gate').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+        }
     </script>
+</div><!-- end app-content -->
 </body>
 </html>
