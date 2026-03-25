@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Calendar | Film Transpo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #fff; overflow-x: hidden; }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(233,69,96,0.3); }
+        .header h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header .meta { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+        .header select { padding: 6px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233,69,96,0.3); border-radius: 6px; color: #fff; font-size: 0.85rem; }
+        .header select option { background: #1a1a2e; }
+        .header a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.8rem; }
+        .header a:hover { color: #e94560; }
+
+        /* Legend */
+        .legend { display: flex; gap: 16px; padding: 8px 20px; background: rgba(0,0,0,0.3); flex-wrap: wrap; align-items: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+        .legend-swatch { width: 16px; height: 16px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.2); }
+        .legend-split { background: linear-gradient(135deg, #60a5fa 50%, #fbbf24 50%) !important; }
+        .legend-today { border: 2px solid #e94560; }
+
+        /* Month grid */
+        .months-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 8px; }
+        @media (max-width: 1200px) { .months-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .months-container { grid-template-columns: 1fr; } }
+
+        .month { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+        .month-header { background: rgba(233,69,96,0.15); padding: 8px 12px; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; text-align: center; color: #e94560; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .weekday { padding: 4px; text-align: center; font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+
+        /* Day cell */
+        .day-cell { min-height: 70px; padding: 3px 4px; border: 1px solid rgba(255,255,255,0.05); position: relative; font-size: 0.65rem; transition: all 0.2s; overflow: hidden; }
+        .day-cell:hover { border-color: rgba(233,69,96,0.4); z-index: 1; }
+        .day-cell.empty { background: rgba(0,0,0,0.2); min-height: 40px; }
+        .day-cell.today { border: 2px solid #e94560; box-shadow: 0 0 10px rgba(233,69,96,0.3); }
+        .day-cell.off-day { background: rgba(255,255,255,0.03); }
+        .day-cell.weekend { background: rgba(255,255,255,0.02); }
+
+        .day-num { font-weight: 700; font-size: 0.75rem; color: rgba(255,255,255,0.8); margin-bottom: 2px; }
+        .day-num .shoot-day { color: #e94560; font-size: 0.65rem; margin-left: 4px; }
+
+        .location-block { padding: 2px 4px; border-radius: 3px; margin-bottom: 1px; line-height: 1.3; }
+        .location-name { font-weight: 700; font-size: 0.6rem; color: rgba(0,0,0,0.85); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .location-address { font-size: 0.55rem; color: rgba(0,0,0,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .move-badge { display: inline-block; background: #e94560; color: white; font-size: 0.5rem; font-weight: 800; padding: 1px 4px; border-radius: 2px; text-transform: uppercase; letter-spacing: 1px; margin: 1px 0; }
+
+        .off-label { color: rgba(255,255,255,0.3); font-size: 0.65rem; font-style: italic; text-align: center; margin-top: 12px; }
+
+        .day-meta { position: absolute; bottom: 2px; right: 4px; font-size: 0.5rem; color: rgba(255,255,255,0.3); }
+
+        /* Split color for move days */
+        .split-bg { background: linear-gradient(180deg, var(--color1) 0%, var(--color1) 45%, transparent 45%, transparent 55%, var(--color2) 55%, var(--color2) 100%); }
+
+        /* Full screen mode */
+        .fullscreen-btn { background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        .fullscreen-btn:hover { border-color: #e94560; color: #e94560; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Production Calendar</h1>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <select id="production-select">
+                <option value="">Select Production...</option>
+            </select>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">Fullscreen</button>
+            <a href="/calendar/admin.html">Edit</a>
+            <a href="/">Home</a>
+        </div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+    <div class="months-container" id="months-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+        let scheduleData = {};
+        let locationColors = {};
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadProductions();
+            const params = new URLSearchParams(window.location.search);
+            const prodId = params.get('prod');
+            if (prodId) {
+                document.getElementById('production-select').value = prodId;
+                await loadSchedule(prodId);
+            }
+            document.getElementById('production-select').addEventListener('change', (e) => {
+                if (e.target.value) loadSchedule(e.target.value);
+            });
+
+            // Auto-refresh every 5 minutes
+            setInterval(() => {
+                const sel = document.getElementById('production-select').value;
+                if (sel) loadSchedule(sel);
+            }, 300000);
+        });
+
+        async function loadProductions() {
+            const { data } = await db.from('productions').select('*').eq('status', 'active').order('name');
+            const select = document.getElementById('production-select');
+            if (data) data.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function loadSchedule(productionId) {
+            const { data } = await db
+                .from('schedule_days')
+                .select('*')
+                .eq('production_id', productionId)
+                .order('shoot_date');
+
+            if (!data || data.length === 0) {
+                document.getElementById('months-container').innerHTML = '<div style="text-align:center;padding:4rem;color:rgba(255,255,255,0.4);grid-column:1/-1;"><h2>No schedule data yet</h2><p style="margin-top:1rem;"><a href="/calendar/admin.html" style="color:#e94560;">Add days in the editor</a></p></div>';
+                document.getElementById('legend').innerHTML = '';
+                return;
+            }
+
+            // Build lookup by date
+            scheduleData = {};
+            locationColors = {};
+            data.forEach(d => {
+                scheduleData[d.shoot_date] = d;
+                if (d.location_1_name && d.location_1_color) locationColors[d.location_1_name] = d.location_1_color;
+                if (d.location_2_name && d.location_2_color) locationColors[d.location_2_name] = d.location_2_color;
+            });
+
+            // Determine date range — 6 months from first entry
+            const dates = data.map(d => new Date(d.shoot_date + 'T12:00:00'));
+            const minDate = new Date(Math.min(...dates));
+            const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+            const endMonth = new Date(startMonth.getFullYear(), startMonth.getMonth() + 6, 0);
+
+            renderLegend();
+            renderCalendar(startMonth, 6);
+        }
+
+        function renderLegend() {
+            const legend = document.getElementById('legend');
+            const items = Object.entries(locationColors).map(([name, color]) =>
+                `<div class="legend-item"><div class="legend-swatch" style="background:${color};"></div>${name}</div>`
+            );
+            items.push('<div class="legend-item"><div class="legend-swatch legend-split"></div>Move Day</div>');
+            items.push('<div class="legend-item"><div class="legend-swatch legend-today"></div>Today</div>');
+            legend.innerHTML = items.join('');
+        }
+
+        function renderCalendar(startMonth, numMonths) {
+            const container = document.getElementById('months-container');
+            const today = new Date();
+            const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+            let html = '';
+            for (let m = 0; m < numMonths; m++) {
+                const monthDate = new Date(startMonth.getFullYear(), startMonth.getMonth() + m, 1);
+                const year = monthDate.getFullYear();
+                const month = monthDate.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const firstDow = new Date(year, month, 1).getDay();
+
+                html += `<div class="month">`;
+                html += `<div class="month-header">${MONTH_NAMES[month]} ${year}</div>`;
+                html += `<div class="weekdays">${DAY_NAMES.map(d => `<div class="weekday">${d}</div>`).join('')}</div>`;
+                html += `<div class="days-grid">`;
+
+                // Empty cells before first day
+                for (let i = 0; i < firstDow; i++) {
+                    html += `<div class="day-cell empty"></div>`;
+                }
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+                    const dow = new Date(year, month, day).getDay();
+                    const isToday = dateStr === todayStr;
+                    const isWeekend = dow === 0 || dow === 6;
+                    const sched = scheduleData[dateStr];
+
+                    let classes = 'day-cell';
+                    if (isToday) classes += ' today';
+                    if (isWeekend && !sched) classes += ' weekend';
+                    if (sched?.is_off_day) classes += ' off-day';
+
+                    let style = '';
+                    if (sched && !sched.is_off_day) {
+                        if (sched.has_move && sched.location_1_color && sched.location_2_color) {
+                            style = `style="--color1:${sched.location_1_color};--color2:${sched.location_2_color};" class="${classes} split-bg"`;
+                        } else if (sched.location_1_color) {
+                            style = `style="background:${sched.location_1_color}20; border-left: 3px solid ${sched.location_1_color};"`;
+                        }
+                    }
+
+                    html += `<div ${style ? style : `class="${classes}"`} ${!style ? '' : ''}>`;
+
+                    // Use class if style doesn't include it
+                    if (style && !style.includes('class=')) {
+                        html = html.slice(0, -1) + ` class="${classes}">`;
+                    }
+
+                    html += `<div class="day-num">${day}`;
+                    if (sched?.shoot_day) html += `<span class="shoot-day">D${sched.shoot_day}</span>`;
+                    html += `</div>`;
+
+                    if (sched) {
+                        if (sched.is_off_day) {
+                            html += `<div class="off-label">${sched.off_day_label || 'OFF'}</div>`;
+                        } else {
+                            if (sched.location_1_name) {
+                                html += `<div class="location-block" style="background:${sched.location_1_color}80;">`;
+                                html += `<div class="location-name">${sched.location_1_name}</div>`;
+                                if (sched.location_1_address) html += `<div class="location-address">${sched.location_1_address}</div>`;
+                                html += `</div>`;
+                            }
+                            if (sched.has_move) {
+                                html += `<div class="move-badge">MOVE</div>`;
+                            }
+                            if (sched.location_2_name) {
+                                html += `<div class="location-block" style="background:${sched.location_2_color}80;">`;
+                                html += `<div class="location-name">${sched.location_2_name}</div>`;
+                                if (sched.location_2_address) html += `<div class="location-address">${sched.location_2_address}</div>`;
+                                html += `</div>`;
+                            }
+                            if (sched.bg_count) {
+                                html += `<div class="day-meta">BG:${sched.bg_count}</div>`;
+                            }
+                        }
+                    }
+
+                    html += `</div>`;
+                }
+
+                html += `</div></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

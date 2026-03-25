@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Editor | Film Transpo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%); min-height: 100vh; color: #fff; padding-bottom: 3rem; }
+        .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+        header { padding: 1.5rem 0; border-bottom: 1px solid rgba(233,69,96,0.3); margin-bottom: 2rem; }
+        nav { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .nav-right { display: flex; gap: 1rem; align-items: center; }
+        .nav-right a { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; }
+        .nav-right a:hover { color: #e94560; }
+        .page-header { text-align: center; margin-bottom: 2rem; }
+        .page-header h1 { font-size: 2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.5rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .page-header p { color: rgba(255,255,255,0.6); }
+
+        /* Controls */
+        .controls { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .controls select { padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233,69,96,0.3); border-radius: 10px; color: #fff; font-size: 1rem; }
+        .controls select option { background: #1a1a2e; }
+        .controls select:focus { outline: none; border-color: #e94560; }
+
+        /* Form */
+        .form-container { background: rgba(255,255,255,0.05); border: 1px solid rgba(233,69,96,0.2); border-radius: 20px; padding: 2rem; backdrop-filter: blur(10px); margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(233,69,96,0.3); border-radius: 8px; color: #fff; font-size: 0.95rem; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #e94560; }
+        .form-group select option { background: #1a1a2e; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        @media (max-width: 600px) { .form-row, .form-row-3 { grid-template-columns: 1fr; } }
+
+        .section-label { margin: 1.5rem 0 1rem; color: #e94560; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid rgba(233,69,96,0.3); padding-bottom: 0.3rem; }
+
+        .color-row { display: flex; gap: 0.5rem; align-items: center; }
+        .color-row input[type="color"] { width: 50px; height: 38px; padding: 2px; background: transparent; border: 1px solid rgba(233,69,96,0.3); border-radius: 6px; cursor: pointer; }
+        .color-row input[type="text"] { flex: 1; }
+
+        /* Preset colors */
+        .color-presets { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .color-preset { width: 28px; height: 28px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .color-preset:hover { border-color: #fff; transform: scale(1.1); }
+
+        .checkbox-row { display: flex; align-items: center; gap: 0.5rem; }
+        .checkbox-row input { width: auto; accent-color: #e94560; }
+        .checkbox-row label { text-transform: none; font-size: 0.95rem; }
+
+        /* Buttons */
+        .btn { padding: 14px 30px; border: none; border-radius: 50px; font-weight: 700; text-transform: uppercase; cursor: pointer; font-size: 0.95rem; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; width: 100%; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(233,69,96,0.4); }
+        .btn-danger { background: rgba(220,38,38,0.2); border: 1px solid #dc2626; color: #dc2626; padding: 10px 20px; font-size: 0.8rem; }
+        .btn-danger:hover { background: #dc2626; color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; font-size: 0.8rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-row { display: flex; gap: 1rem; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
+
+        /* Schedule list */
+        .schedule-list { margin-top: 2rem; }
+        .schedule-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
+        .schedule-item:hover { border-color: #e94560; background: rgba(233,69,96,0.05); }
+        .schedule-item .date { font-weight: 700; min-width: 100px; }
+        .schedule-item .day-tag { background: #e94560; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+        .schedule-item .loc { color: rgba(255,255,255,0.6); font-size: 0.85rem; flex: 1; margin: 0 12px; }
+        .schedule-item .move-tag { background: rgba(255,193,7,0.2); color: #ffc107; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+
+        /* Toast */
+        .toast { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 14px 24px; border-radius: 12px; font-weight: 600; z-index: 3000; transform: translateX(120%); transition: transform 0.3s ease; }
+        .toast.visible { transform: translateX(0); }
+        .toast.error { background: #e94560; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="logo">Film Transpo</a>
+                <div class="nav-right">
+                    <a href="/calendar/">View Calendar</a>
+                    <a href="/">Home</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Calendar Editor</h1>
+            <p>Add and edit shoot days for the production calendar</p>
+        </div>
+
+        <div class="controls">
+            <select id="production-select">
+                <option value="">Select Production...</option>
+            </select>
+        </div>
+
+        <div class="form-container" id="form-container">
+            <form id="day-form">
+                <input type="hidden" id="edit-id" value="">
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>Shoot Date *</label>
+                        <input type="date" id="shoot-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Day # (e.g. 1, 2, 3)</label>
+                        <input type="number" id="shoot-day" placeholder="Day number">
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end; gap:1rem;">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="is-off-day">
+                            <label for="is-off-day">Off Day / Holiday</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="off-day-fields" style="display:none;">
+                    <div class="form-group">
+                        <label>Off Day Label</label>
+                        <input type="text" id="off-day-label" placeholder="e.g. HAPPY HOLIDAYS, COMPANY OFF, WEEKEND">
+                    </div>
+                </div>
+
+                <div id="shoot-day-fields">
+                    <div class="section-label">Location 1</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Set / Location Name</label>
+                            <input type="text" id="loc1-name" placeholder="e.g. FENNARIO RANCH">
+                        </div>
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="loc1-type">
+                                <option value="location">Location</option>
+                                <option value="stage">Stage</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" id="loc1-address" placeholder="e.g. 4563 Polo Lane SE, Atlanta GA">
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <div class="color-row">
+                            <input type="color" id="loc1-color" value="#60a5fa">
+                            <input type="text" id="loc1-color-text" value="#60a5fa" placeholder="#hex">
+                        </div>
+                        <div class="color-presets" id="presets1">
+                            <div class="color-preset" style="background:#60a5fa;" onclick="setColor(1,'#60a5fa')" title="Blue (Stage)"></div>
+                            <div class="color-preset" style="background:#93c5fd;" onclick="setColor(1,'#93c5fd')" title="Light Blue"></div>
+                            <div class="color-preset" style="background:#86efac;" onclick="setColor(1,'#86efac')" title="Green"></div>
+                            <div class="color-preset" style="background:#fbbf24;" onclick="setColor(1,'#fbbf24')" title="Yellow/Gold"></div>
+                            <div class="color-preset" style="background:#fca5a5;" onclick="setColor(1,'#fca5a5')" title="Pink/Red"></div>
+                            <div class="color-preset" style="background:#c4b5fd;" onclick="setColor(1,'#c4b5fd')" title="Purple"></div>
+                            <div class="color-preset" style="background:#fdba74;" onclick="setColor(1,'#fdba74')" title="Orange"></div>
+                            <div class="color-preset" style="background:#67e8f9;" onclick="setColor(1,'#67e8f9')" title="Cyan"></div>
+                            <div class="color-preset" style="background:#fde68a;" onclick="setColor(1,'#fde68a')" title="Light Yellow"></div>
+                            <div class="color-preset" style="background:#d9f99d;" onclick="setColor(1,'#d9f99d')" title="Lime"></div>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-row" style="margin: 1rem 0;">
+                        <input type="checkbox" id="has-move">
+                        <label for="has-move" style="font-weight:700; color:#ffc107;">MID-DAY MOVE</label>
+                    </div>
+
+                    <div id="loc2-fields" style="display:none;">
+                        <div class="section-label">Location 2 (After Move)</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Set / Location Name</label>
+                                <input type="text" id="loc2-name" placeholder="e.g. MONTAGUE DISTILLERY">
+                            </div>
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="loc2-type">
+                                    <option value="location">Location</option>
+                                    <option value="stage">Stage</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Address</label>
+                            <input type="text" id="loc2-address" placeholder="Address after move">
+                        </div>
+                        <div class="form-group">
+                            <label>Color</label>
+                            <div class="color-row">
+                                <input type="color" id="loc2-color" value="#fbbf24">
+                                <input type="text" id="loc2-color-text" value="#fbbf24" placeholder="#hex">
+                            </div>
+                            <div class="color-presets">
+                                <div class="color-preset" style="background:#60a5fa;" onclick="setColor(2,'#60a5fa')"></div>
+                                <div class="color-preset" style="background:#93c5fd;" onclick="setColor(2,'#93c5fd')"></div>
+                                <div class="color-preset" style="background:#86efac;" onclick="setColor(2,'#86efac')"></div>
+                                <div class="color-preset" style="background:#fbbf24;" onclick="setColor(2,'#fbbf24')"></div>
+                                <div class="color-preset" style="background:#fca5a5;" onclick="setColor(2,'#fca5a5')"></div>
+                                <div class="color-preset" style="background:#c4b5fd;" onclick="setColor(2,'#c4b5fd')"></div>
+                                <div class="color-preset" style="background:#fdba74;" onclick="setColor(2,'#fdba74')"></div>
+                                <div class="color-preset" style="background:#67e8f9;" onclick="setColor(2,'#67e8f9')"></div>
+                                <div class="color-preset" style="background:#fde68a;" onclick="setColor(2,'#fde68a')"></div>
+                                <div class="color-preset" style="background:#d9f99d;" onclick="setColor(2,'#d9f99d')"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-label">Details</div>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>2 Room Trailer</label>
+                            <input type="text" id="two-room" placeholder="Trailer assignment">
+                        </div>
+                        <div class="form-group">
+                            <label>3 Room Trailer</label>
+                            <input type="text" id="three-room" placeholder="Trailer assignment">
+                        </div>
+                        <div class="form-group">
+                            <label>BG Count</label>
+                            <input type="text" id="bg-count" placeholder="e.g. 45">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="notes" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+                </div>
+
+                <div class="btn-row">
+                    <div>
+                        <button type="button" class="btn btn-danger" id="delete-btn" style="display:none;" onclick="deleteDay()">Delete</button>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">Clear</button>
+                        <button type="submit" class="btn btn-primary" id="save-btn" style="width:auto;">Save Day</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Existing schedule -->
+        <h3 style="margin-bottom: 1rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem;">Scheduled Days</h3>
+        <div class="schedule-list" id="schedule-list">
+            <p style="color:rgba(255,255,255,0.3);">Select a production to see scheduled days.</p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentProductionId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadProductions();
+
+            document.getElementById('production-select').addEventListener('change', (e) => {
+                currentProductionId = e.target.value;
+                if (currentProductionId) loadDays();
+            });
+
+            // Toggle move fields
+            document.getElementById('has-move').addEventListener('change', (e) => {
+                document.getElementById('loc2-fields').style.display = e.target.checked ? 'block' : 'none';
+            });
+
+            // Toggle off day fields
+            document.getElementById('is-off-day').addEventListener('change', (e) => {
+                document.getElementById('off-day-fields').style.display = e.target.checked ? 'block' : 'none';
+                document.getElementById('shoot-day-fields').style.display = e.target.checked ? 'none' : 'block';
+            });
+
+            // Sync color inputs
+            ['1','2'].forEach(n => {
+                document.getElementById(`loc${n}-color`).addEventListener('input', (e) => {
+                    document.getElementById(`loc${n}-color-text`).value = e.target.value;
+                });
+                document.getElementById(`loc${n}-color-text`).addEventListener('input', (e) => {
+                    if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                        document.getElementById(`loc${n}-color`).value = e.target.value;
+                    }
+                });
+            });
+
+            document.getElementById('day-form').addEventListener('submit', saveDay);
+        });
+
+        function setColor(num, color) {
+            document.getElementById(`loc${num}-color`).value = color;
+            document.getElementById(`loc${num}-color-text`).value = color;
+        }
+
+        async function loadProductions() {
+            const { data } = await db.from('productions').select('*').eq('status', 'active').order('name');
+            const select = document.getElementById('production-select');
+            if (data) data.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function loadDays() {
+            const { data } = await db
+                .from('schedule_days')
+                .select('*')
+                .eq('production_id', currentProductionId)
+                .order('shoot_date');
+
+            const list = document.getElementById('schedule-list');
+            if (!data || data.length === 0) {
+                list.innerHTML = '<p style="color:rgba(255,255,255,0.3);">No days scheduled yet. Add one above.</p>';
+                return;
+            }
+
+            list.innerHTML = data.map(d => {
+                const dateObj = new Date(d.shoot_date + 'T12:00:00');
+                const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const loc = d.is_off_day ? (d.off_day_label || 'OFF') : (d.location_1_name || '—');
+                const loc2 = d.has_move && d.location_2_name ? ` → ${d.location_2_name}` : '';
+                return `<div class="schedule-item" onclick="editDay('${d.id}')">
+                    <span class="date">${dateStr}</span>
+                    ${d.shoot_day ? `<span class="day-tag">D${d.shoot_day}</span>` : ''}
+                    <span class="loc">${loc}${loc2}</span>
+                    ${d.has_move ? '<span class="move-tag">MOVE</span>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        async function editDay(id) {
+            const { data } = await db.from('schedule_days').select('*').eq('id', id).single();
+            if (!data) return;
+
+            document.getElementById('edit-id').value = data.id;
+            document.getElementById('shoot-date').value = data.shoot_date;
+            document.getElementById('shoot-day').value = data.shoot_day || '';
+            document.getElementById('is-off-day').checked = data.is_off_day;
+            document.getElementById('off-day-label').value = data.off_day_label || '';
+            document.getElementById('loc1-name').value = data.location_1_name || '';
+            document.getElementById('loc1-address').value = data.location_1_address || '';
+            document.getElementById('loc1-type').value = data.location_1_type || 'location';
+            setColor(1, data.location_1_color || '#60a5fa');
+            document.getElementById('has-move').checked = data.has_move;
+            document.getElementById('loc2-name').value = data.location_2_name || '';
+            document.getElementById('loc2-address').value = data.location_2_address || '';
+            document.getElementById('loc2-type').value = data.location_2_type || 'location';
+            setColor(2, data.location_2_color || '#fbbf24');
+            document.getElementById('two-room').value = data.two_room || '';
+            document.getElementById('three-room').value = data.three_room || '';
+            document.getElementById('bg-count').value = data.bg_count || '';
+            document.getElementById('notes').value = data.notes || '';
+
+            // Show/hide sections
+            document.getElementById('off-day-fields').style.display = data.is_off_day ? 'block' : 'none';
+            document.getElementById('shoot-day-fields').style.display = data.is_off_day ? 'none' : 'block';
+            document.getElementById('loc2-fields').style.display = data.has_move ? 'block' : 'none';
+            document.getElementById('delete-btn').style.display = 'inline-block';
+            document.getElementById('save-btn').textContent = 'Update Day';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('day-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('delete-btn').style.display = 'none';
+            document.getElementById('save-btn').textContent = 'Save Day';
+            document.getElementById('off-day-fields').style.display = 'none';
+            document.getElementById('shoot-day-fields').style.display = 'block';
+            document.getElementById('loc2-fields').style.display = 'none';
+            setColor(1, '#60a5fa');
+            setColor(2, '#fbbf24');
+        }
+
+        async function saveDay(e) {
+            e.preventDefault();
+            if (!currentProductionId) { showToast('Select a production first', true); return; }
+
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const isOffDay = document.getElementById('is-off-day').checked;
+            const record = {
+                production_id: currentProductionId,
+                shoot_date: document.getElementById('shoot-date').value,
+                shoot_day: document.getElementById('shoot-day').value ? parseInt(document.getElementById('shoot-day').value) : null,
+                is_off_day: isOffDay,
+                off_day_label: isOffDay ? document.getElementById('off-day-label').value : null,
+                location_1_name: isOffDay ? null : document.getElementById('loc1-name').value || null,
+                location_1_address: isOffDay ? null : document.getElementById('loc1-address').value || null,
+                location_1_type: isOffDay ? null : document.getElementById('loc1-type').value,
+                location_1_color: isOffDay ? null : document.getElementById('loc1-color').value,
+                has_move: !isOffDay && document.getElementById('has-move').checked,
+                location_2_name: (!isOffDay && document.getElementById('has-move').checked) ? document.getElementById('loc2-name').value || null : null,
+                location_2_address: (!isOffDay && document.getElementById('has-move').checked) ? document.getElementById('loc2-address').value || null : null,
+                location_2_type: (!isOffDay && document.getElementById('has-move').checked) ? document.getElementById('loc2-type').value : null,
+                location_2_color: (!isOffDay && document.getElementById('has-move').checked) ? document.getElementById('loc2-color').value : null,
+                two_room: document.getElementById('two-room').value || null,
+                three_room: document.getElementById('three-room').value || null,
+                bg_count: document.getElementById('bg-count').value || null,
+                notes: document.getElementById('notes').value || null,
+            };
+
+            try {
+                const editId = document.getElementById('edit-id').value;
+                let error;
+                if (editId) {
+                    ({ error } = await db.from('schedule_days').update(record).eq('id', editId));
+                } else {
+                    ({ error } = await db.from('schedule_days').insert(record));
+                }
+                if (error) throw error;
+                showToast(editId ? 'Day updated!' : 'Day added!');
+                resetForm();
+                await loadDays();
+            } catch (err) {
+                showToast('Error: ' + err.message, true);
+            }
+            btn.disabled = false;
+            btn.textContent = 'Save Day';
+        }
+
+        async function deleteDay() {
+            const editId = document.getElementById('edit-id').value;
+            if (!editId || !confirm('Delete this day?')) return;
+
+            const { error } = await db.from('schedule_days').delete().eq('id', editId);
+            if (error) { showToast('Error: ' + error.message, true); return; }
+            showToast('Day deleted');
+            resetForm();
+            await loadDays();
+        }
+
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast visible' + (isError ? ' error' : '');
+            setTimeout(() => toast.classList.remove('visible'), 3000);
+        }
+    </script>
+</body>
+</html>
