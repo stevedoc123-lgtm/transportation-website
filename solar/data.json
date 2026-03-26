@@ -2,36 +2,36 @@
   "target_date": "2026-03-27",
   "forecast": {
     "date": "2026-03-27",
-    "cloud_cover_pct": 10,
-    "shortwave_radiation": 23.22,
-    "sunshine_hours": 11.027919444444445,
-    "temp_max_f": 82.9,
-    "temp_min_f": 59.5
+    "cloud_cover_pct": 12,
+    "shortwave_radiation": 23.38,
+    "sunshine_hours": 11.0,
+    "temp_max_f": 82.6,
+    "temp_min_f": 59.7
   },
   "solar_r2": 0.208,
   "load_r2": 0.182,
   "prediction": {
-    "current_soc_pct": 70.5,
-    "current_kwh": 56.4,
+    "current_soc_pct": 90.0,
+    "current_kwh": 72.0,
     "target_soc_pct": 90.0,
     "target_kwh": 72.0,
-    "charge_needed_kwh": 15.6,
-    "predicted_solar_kwh": 35.4,
-    "predicted_load_kwh": 69.5,
-    "solar_gap_kwh": 34.0,
+    "charge_needed_kwh": 0,
+    "predicted_solar_kwh": 33.2,
+    "predicted_load_kwh": 69.4,
+    "solar_gap_kwh": 36.2,
     "overnight_loads_kwh": 34.0,
     "ev_charging": true
   },
   "savings": {
     "current_nightly_kwh": 64.0,
-    "current_nightly_cost": 1.41,
-    "optimal_nightly_kwh": 15.6,
-    "optimal_nightly_cost": 0.34,
-    "daily_savings": 1.06,
-    "monthly_savings": 31.94,
-    "annual_savings": 388.65
+    "current_nightly_cost": 4.48,
+    "optimal_nightly_kwh": 0,
+    "optimal_nightly_cost": 0.0,
+    "daily_savings": 4.48,
+    "monthly_savings": 134.4,
+    "annual_savings": 1635.2
   },
-  "generated_at": "2026-03-26 08:21",
+  "generated_at": "2026-03-26 15:43",
   "status": "ok",
   "agent_configured": false
 }
