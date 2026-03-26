@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solar Optimizer — Shadowmoor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -237,6 +238,61 @@
             border-top: 1px solid rgba(255,255,255,0.06);
         }
 
+        /* ── Charts section ── */
+        .charts-section {
+            margin-bottom: 1.5rem;
+        }
+        .chart-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 1.4rem;
+            margin-bottom: 1rem;
+        }
+        .chart-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 1rem;
+        }
+        .chart-wrap {
+            position: relative;
+            height: 220px;
+        }
+        .accuracy-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .acc-stat {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+        }
+        .acc-stat .val {
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+        .acc-stat .val.good { color: #34d399; }
+        .acc-stat .val.warn { color: #fbbf24; }
+        .acc-stat .val.bad  { color: #f87171; }
+        .acc-stat .lbl {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 0.2rem;
+        }
+        .no-accuracy {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.9rem;
+        }
+
         /* ── Loading / error states ── */
         .state-box {
             text-align: center;
@@ -386,9 +442,15 @@ async function load() {
         </div>
 
         </div>
+
+        <!-- Accuracy Charts -->
+        <div class="charts-section" id="charts-section"></div>
     `;
 
     footer.textContent = `Last updated: ${data.generated_at} · Model accuracy — Solar R²: ${data.solar_r2} · Load R²: ${data.load_r2}`;
+
+    // ── Load accuracy charts ────────────────────────────────────
+    loadAccuracyCharts();
 
     // ── EV toggle logic ──────────────────────────────────────────
     const BATTERY_KWH   = 80;
@@ -491,6 +553,194 @@ async function applySettings() {
         status.textContent = `❌ ${e.message}`;
         status.className = 'apply-status error';
     }
+}
+
+// ── Accuracy Charts ──────────────────────────────────────────────────────────
+async function loadAccuracyCharts() {
+    const section = document.getElementById('charts-section');
+    if (!section) return;
+
+    let acc;
+    try {
+        const resp = await fetch('accuracy.json?t=' + Date.now());
+        acc = await resp.json();
+    } catch (e) {
+        section.innerHTML = `<div class="no-accuracy">Accuracy tracking starts after the first full day of predictions.</div>`;
+        return;
+    }
+
+    if (!acc || acc.length === 0) {
+        section.innerHTML = `<div class="no-accuracy">No accuracy data yet. Check back tomorrow.</div>`;
+        return;
+    }
+
+    // Sort by date
+    acc.sort((a, b) => a.date.localeCompare(b.date));
+
+    const dates       = acc.map(r => r.date.slice(5)); // MM-DD
+    const predSolar   = acc.map(r => r.pred_solar);
+    const actSolar    = acc.map(r => r.actual_solar);
+    const predLoad    = acc.map(r => r.pred_load);
+    const actLoad     = acc.map(r => r.actual_load);
+    const solarErrors = acc.map(r => Math.abs(r.solar_error_pct));
+    const loadErrors  = acc.map(r => Math.abs(r.load_error_pct));
+
+    // Compute summary stats
+    const avgSolarErr = (solarErrors.reduce((a,b) => a+b, 0) / solarErrors.length).toFixed(1);
+    const avgLoadErr  = (loadErrors.reduce((a,b) => a+b, 0) / loadErrors.length).toFixed(1);
+    const daysScored  = acc.length;
+    const overcharges = acc.filter(r => (r.pred_load - r.pred_solar) > (r.actual_load - r.actual_solar)).length;
+
+    function errClass(v) { return v < 15 ? 'good' : v < 30 ? 'warn' : 'bad'; }
+
+    section.innerHTML = `
+        <div class="chart-card">
+            <h3>Prediction Accuracy — ${daysScored} days tracked</h3>
+            <div class="accuracy-stats">
+                <div class="acc-stat">
+                    <div class="val ${errClass(avgSolarErr)}">${avgSolarErr}%</div>
+                    <div class="lbl">Avg Solar Error</div>
+                </div>
+                <div class="acc-stat">
+                    <div class="val ${errClass(avgLoadErr)}">${avgLoadErr}%</div>
+                    <div class="lbl">Avg Load Error</div>
+                </div>
+                <div class="acc-stat">
+                    <div class="val" style="color:rgba(255,255,255,0.8)">${daysScored}</div>
+                    <div class="lbl">Days Scored</div>
+                </div>
+                <div class="acc-stat">
+                    <div class="val" style="color:rgba(255,255,255,0.8)">${overcharges}/${daysScored}</div>
+                    <div class="lbl">Days Overcharged</div>
+                </div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Solar — Predicted vs Actual (kWh)</h3>
+            <div class="chart-wrap"><canvas id="solar-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3>Load — Predicted vs Actual (kWh)</h3>
+            <div class="chart-wrap"><canvas id="load-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3>Prediction Error Over Time (%)</h3>
+            <div class="chart-wrap"><canvas id="error-chart"></canvas></div>
+        </div>
+    `;
+
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } },
+                grid:  { color: 'rgba(255,255,255,0.05)' }
+            },
+            y: {
+                ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } },
+                grid:  { color: 'rgba(255,255,255,0.05)' }
+            }
+        }
+    };
+
+    // Solar chart
+    new Chart(document.getElementById('solar-chart'), {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [
+                {
+                    label: 'Predicted',
+                    data: predSolar,
+                    backgroundColor: 'rgba(233, 69, 96, 0.6)',
+                    borderColor: 'rgba(233, 69, 96, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.7,
+                },
+                {
+                    label: 'Actual',
+                    data: actSolar,
+                    backgroundColor: 'rgba(251, 191, 36, 0.6)',
+                    borderColor: 'rgba(251, 191, 36, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.7,
+                }
+            ]
+        },
+        options: { ...chartDefaults }
+    });
+
+    // Load chart
+    new Chart(document.getElementById('load-chart'), {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [
+                {
+                    label: 'Predicted',
+                    data: predLoad,
+                    backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.7,
+                },
+                {
+                    label: 'Actual',
+                    data: actLoad,
+                    backgroundColor: 'rgba(52, 211, 153, 0.6)',
+                    borderColor: 'rgba(52, 211, 153, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.7,
+                }
+            ]
+        },
+        options: { ...chartDefaults }
+    });
+
+    // Error % chart (line)
+    new Chart(document.getElementById('error-chart'), {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [
+                {
+                    label: 'Solar Error %',
+                    data: solarErrors,
+                    borderColor: '#e94560',
+                    backgroundColor: 'rgba(233, 69, 96, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#e94560',
+                },
+                {
+                    label: 'Load Error %',
+                    data: loadErrors,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#6366f1',
+                }
+            ]
+        },
+        options: { ...chartDefaults }
+    });
 }
 
 load();
