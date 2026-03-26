@@ -361,7 +361,7 @@ async function load() {
             ${noCharge
                 ? `<div class="no-charge-badge">✅ No charging needed tonight</div>`
                 : `<div class="hero-unit">Charge ${p.charge_needed_kwh} kWh between 11 PM – 7 AM</div>
-                   <div class="hero-sub">@ $0.022/kWh super off-peak rate</div>`
+                   <div class="hero-sub">@ $0.07/kWh all-in super off-peak rate</div>`
             }
             </div>
         </div>
@@ -456,7 +456,7 @@ async function load() {
     const BATTERY_KWH   = 80;
     const MIN_SOC       = 0.20;
     const MAX_SOC       = 0.90;
-    const RATE          = 0.022;
+    const RATE          = 0.070;
     const OLD_CHARGE    = 64;    // what you charge now (80% of 80kWh)
     const EV_KWH        = 30;
     const SPA_KWH       = 4;
@@ -484,7 +484,7 @@ async function load() {
         } else {
             document.getElementById('hero-detail').innerHTML =
                 `<div class="hero-unit">Charge ${chargeNeeded} kWh between 11 PM – 7 AM</div>
-                 <div class="hero-sub">@ $0.022/kWh super off-peak rate</div>`;
+                 <div class="hero-sub">@ $0.07/kWh all-in super off-peak rate</div>`;
         }
 
         // Update savings
