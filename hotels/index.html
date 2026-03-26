@@ -339,6 +339,58 @@
             </table>
         </div>
 
+        <!-- P&L Section -->
+        <div class="section-label">2025 Profit & Loss</div>
+
+        <!-- P&L Portfolio Summary -->
+        <div class="hero" id="pnl-hero" style="display:none">
+            <div class="hero-card">
+                <div class="hero-label">YTD Revenue</div>
+                <div class="hero-value" id="pnl-ytd-rev">—</div>
+                <div class="hero-sub">All 4 properties</div>
+            </div>
+            <div class="hero-card">
+                <div class="hero-label">YTD Net Income</div>
+                <div class="hero-value" id="pnl-ytd-net">—</div>
+                <div class="hero-sub" id="pnl-ytd-margin">—</div>
+            </div>
+            <div class="hero-card">
+                <div class="hero-label">YTD Expenses</div>
+                <div class="hero-value" id="pnl-ytd-exp">—</div>
+                <div class="hero-sub">Operating expenses</div>
+            </div>
+        </div>
+
+        <!-- P&L by Hotel Table -->
+        <div class="table-wrapper" id="pnl-table-wrap" style="display:none">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>YTD Revenue</th>
+                        <th>YTD Expenses</th>
+                        <th>NOI</th>
+                        <th>Net Income</th>
+                        <th>Margin</th>
+                    </tr>
+                </thead>
+                <tbody id="pnl-table"></tbody>
+            </table>
+        </div>
+
+        <!-- Monthly Revenue vs Net Income Chart -->
+        <div class="chart-wrapper" id="pnl-chart-wrap" style="display:none">
+            <div class="chart-tabs">
+                <button class="chart-tab active" onclick="switchPnlChart('revenue',this)">Revenue</button>
+                <button class="chart-tab" onclick="switchPnlChart('net',this)">Net Income</button>
+                <button class="chart-tab" onclick="switchPnlChart('noi',this)">NOI</button>
+                <button class="chart-tab" onclick="switchPnlChart('expenses',this)">Expense Breakdown</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="pnlChart"></canvas>
+            </div>
+        </div>
+
     </div>
 
     <footer id="footer">—</footer>
@@ -455,6 +507,9 @@ function render(data) {
     // Chart
     buildChart('occ');
 
+    // P&L
+    if (data.pandl) renderPnL(data);
+
     // Footer
     document.getElementById('footer').textContent = 'Updated ' + data.generated_at;
 }
@@ -569,6 +624,174 @@ fetch('data.json?v=' + Date.now())
         document.getElementById('error-msg').style.display = 'block';
         document.getElementById('error-msg').textContent = 'Could not load data: ' + err.message;
     });
+
+// ── P&L Section ────────────────────────────────────────────────────
+let pnlChartInstance = null;
+let pnlData = null;
+let currentPnlMetric = 'revenue';
+
+function renderPnL(data) {
+    pnlData = data.pandl;
+    if (!pnlData || pnlData.length === 0) return;
+
+    const p = data.portfolio;
+
+    // Show sections
+    document.getElementById('pnl-hero').style.display = '';
+    document.getElementById('pnl-table-wrap').style.display = '';
+    document.getElementById('pnl-chart-wrap').style.display = '';
+
+    // Portfolio P&L hero
+    document.getElementById('pnl-ytd-rev').textContent = fmt$(p.ytd_revenue);
+    const netEl = document.getElementById('pnl-ytd-net');
+    netEl.textContent = fmt$(p.ytd_net_income);
+    if (p.ytd_net_income < 0) netEl.style.cssText = 'background:linear-gradient(135deg,#ef476f,#ff6b8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:2.4rem;font-weight:700';
+    document.getElementById('pnl-ytd-margin').textContent = p.ytd_margin_pct + '% net margin';
+    document.getElementById('pnl-ytd-exp').textContent = fmt$(p.ytd_expenses);
+
+    // P&L table
+    const tbody = document.getElementById('pnl-table');
+    tbody.innerHTML = '';
+    let totRev=0, totExp=0, totNoi=0, totNet=0;
+    pnlData.forEach(h => {
+        const y = h.ytd;
+        totRev += y.revenue; totExp += y.expenses; totNoi += y.noi; totNet += y.net_income;
+        const mc = y.margin_pct >= 5 ? 'td-good' : y.margin_pct >= 0 ? 'td-warn' : 'td-bad';
+        const nc = y.net_income >= 0 ? 'td-good' : 'td-bad';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="td-hotel">${h.name}</td>
+            <td>${fmt$(y.revenue)}</td>
+            <td>${fmt$(y.expenses)}</td>
+            <td>${fmt$(y.noi)}</td>
+            <td class="${nc}">${fmt$(y.net_income)}</td>
+            <td class="${mc}">${y.margin_pct}%</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    // Total row
+    const totMargin = totRev ? (totNet/totRev*100).toFixed(1) : '0.0';
+    const tr = document.createElement('tr');
+    tr.style.fontWeight = '700';
+    tr.style.borderTop = '2px solid rgba(0,212,170,0.3)';
+    tr.innerHTML = `
+        <td style="color:#00d4aa">PORTFOLIO</td>
+        <td>${fmt$(totRev)}</td>
+        <td>${fmt$(totExp)}</td>
+        <td>${fmt$(totNoi)}</td>
+        <td class="${totNet>=0?'td-good':'td-bad'}">${fmt$(totNet)}</td>
+        <td class="${totMargin>=5?'td-good':totMargin>=0?'td-warn':'td-bad'}">${totMargin}%</td>
+    `;
+    tbody.appendChild(tr);
+
+    // Build initial chart
+    buildPnlChart('revenue');
+}
+
+function buildPnlChart(metric) {
+    currentPnlMetric = metric;
+    if (!pnlData) return;
+
+    const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    if (metric === 'expenses') {
+        // Stacked bar chart showing expense categories for one sample hotel or portfolio
+        // Use all hotels summed by month
+        const monthSet = new Set();
+        pnlData.forEach(h => h.monthly.forEach(m => monthSet.add(m.year + '-' + String(m.month).padStart(2,'0'))));
+        const months = [...monthSet].sort();
+        const labels = months.map(m => MONTHS[parseInt(m.split('-')[1])] + ' ' + m.split('-')[0].slice(2));
+
+        const cats = ['payroll_total','franchise_fees','marketing_total','utilities_total','property_expenses','insurance','mortgage_interest'];
+        const catNames = ['Payroll','Franchise','Marketing','Utilities','Property','Insurance','Mortgage'];
+        const catColors = ['#00d4aa','#45b7d1','#a29bfe','#ffd166','#ef476f','#ff9f43','#e056fd'];
+
+        const datasets = cats.map((cat, ci) => ({
+            label: catNames[ci],
+            data: months.map(m => {
+                let total = 0;
+                pnlData.forEach(h => {
+                    const row = h.monthly.find(r => (r.year+'-'+String(r.month).padStart(2,'0')) === m);
+                    if (row) total += row[cat] || 0;
+                });
+                return Math.round(total);
+            }),
+            backgroundColor: catColors[ci],
+            borderRadius: 3,
+        }));
+
+        if (pnlChartInstance) pnlChartInstance.destroy();
+        pnlChartInstance = new Chart(document.getElementById('pnlChart'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 }, boxWidth: 10 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt$(ctx.parsed.y)}` } }
+                },
+                scales: {
+                    x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.35)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { stacked: true, ticks: { color: 'rgba(255,255,255,0.35)', callback: v => '$'+(v/1000).toFixed(0)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+        return;
+    }
+
+    // Line/bar charts for revenue, net income, NOI
+    const monthSet = new Set();
+    pnlData.forEach(h => h.monthly.forEach(m => monthSet.add(m.year + '-' + String(m.month).padStart(2,'0'))));
+    const months = [...monthSet].sort();
+    const labels = months.map(m => MONTHS[parseInt(m.split('-')[1])]);
+
+    const field = metric === 'revenue' ? 'total_revenue' : metric === 'net' ? 'net_income' : 'net_operating_income';
+
+    const datasets = pnlData.map((h, i) => ({
+        label: h.name,
+        data: months.map(m => {
+            const row = h.monthly.find(r => (r.year+'-'+String(r.month).padStart(2,'0')) === m);
+            return row ? Math.round(row[field]) : null;
+        }),
+        borderColor: HOTEL_COLORS[i].line,
+        backgroundColor: metric === 'revenue' ? HOTEL_COLORS[i].fill : undefined,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.3,
+        fill: false,
+    }));
+
+    if (pnlChartInstance) pnlChartInstance.destroy();
+    pnlChartInstance = new Chart(document.getElementById('pnlChart'), {
+        type: metric === 'revenue' ? 'bar' : 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                    backgroundColor: 'rgba(10,15,10,0.9)',
+                    borderColor: 'rgba(0,212,170,0.3)', borderWidth: 1,
+                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt$(ctx.parsed.y)}` }
+                }
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(255,255,255,0.35)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: {
+                    ticks: { color: 'rgba(255,255,255,0.35)', callback: v => '$'+(v/1000).toFixed(0)+'k' },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                }
+            }
+        }
+    });
+}
+
+function switchPnlChart(metric, btn) {
+    btn.parentElement.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    buildPnlChart(metric);
+}
 
 // Refresh every 10 minutes
 setInterval(() => {
