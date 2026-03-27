@@ -238,6 +238,83 @@
             border-top: 1px solid rgba(255,255,255,0.06);
         }
 
+        /* ── Live status bar ── */
+        .live-bar {
+            background: rgba(52, 211, 153, 0.08);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+            border-radius: 14px;
+            padding: 1rem 1.4rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .live-dot {
+            width: 10px; height: 10px;
+            background: #34d399;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .live-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+        }
+        .live-stats {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        .live-stat {
+            text-align: center;
+        }
+        .live-val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .live-val.green { color: #34d399; }
+        .live-val.yellow { color: #fbbf24; }
+        .live-lbl {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.35);
+        }
+        .live-time {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.3);
+            margin-left: auto;
+        }
+
+        /* ── Today's production chart ── */
+        .today-chart-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 1.4rem;
+            margin-bottom: 1.5rem;
+        }
+        .today-chart-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 1rem;
+        }
+        .today-chart-wrap {
+            position: relative;
+            height: 200px;
+        }
+
         /* ── Charts section ── */
         .charts-section {
             margin-bottom: 1.5rem;
@@ -364,6 +441,20 @@ async function load() {
                    <div class="hero-sub">@ $0.07/kWh all-in super off-peak rate</div>`
             }
             </div>
+        </div>
+
+        <!-- Live Status from Pi -->
+        <div class="live-bar" id="live-bar" style="display:none">
+            <div class="live-dot"></div>
+            <div class="live-label">Live from Pi</div>
+            <div class="live-stats" id="live-stats"></div>
+            <div class="live-time" id="live-time"></div>
+        </div>
+
+        <!-- Today's Solar Production -->
+        <div class="today-chart-card" id="today-chart-card" style="display:none">
+            <h3>Today's System — Live from Raspberry Pi</h3>
+            <div class="today-chart-wrap"><canvas id="today-chart"></canvas></div>
         </div>
 
         <!-- Stats -->
@@ -554,6 +645,145 @@ async function applySettings() {
         status.className = 'apply-status error';
     }
 }
+
+// ── Supabase Live Data ───────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+
+let todayChartInstance = null;
+
+async function loadLiveData() {
+    try {
+        // Get latest reading
+        const latestResp = await fetch(
+            `${SUPABASE_URL}/rest/v1/solar_readings?order=timestamp.desc&limit=1`,
+            { headers: { apikey: SUPABASE_KEY } }
+        );
+        const latest = (await latestResp.json())[0];
+        if (!latest) return;
+
+        // Show live bar
+        const bar = document.getElementById('live-bar');
+        const stats = document.getElementById('live-stats');
+        const timeEl = document.getElementById('live-time');
+        bar.style.display = '';
+
+        const soc = latest.soc || 0;
+        const pv = latest.pv_power || 0;
+        const target = latest.charge_target || 0;
+
+        const socClass = soc > 60 ? 'green' : soc > 30 ? 'yellow' : '';
+
+        stats.innerHTML = `
+            <div class="live-stat">
+                <div class="live-val ${socClass}">${soc}%</div>
+                <div class="live-lbl">Battery</div>
+            </div>
+            <div class="live-stat">
+                <div class="live-val ${pv > 0 ? 'green' : ''}">${pv >= 1000 ? (pv/1000).toFixed(1) + ' kW' : pv + ' W'}</div>
+                <div class="live-lbl">Solar Now</div>
+            </div>
+            <div class="live-stat">
+                <div class="live-val">${target}%</div>
+                <div class="live-lbl">Charge Target</div>
+            </div>
+        `;
+
+        const ts = new Date(latest.timestamp);
+        const ago = Math.round((Date.now() - ts.getTime()) / 60000);
+        timeEl.textContent = ago < 2 ? 'Just now' : ago < 60 ? `${ago}m ago` : `${Math.round(ago/60)}h ago`;
+
+        // Get today's readings for the chart
+        const today = new Date().toISOString().slice(0, 10);
+        const todayResp = await fetch(
+            `${SUPABASE_URL}/rest/v1/solar_readings?timestamp=gte.${today}T00:00:00&order=timestamp.asc`,
+            { headers: { apikey: SUPABASE_KEY } }
+        );
+        const todayData = await todayResp.json();
+
+        if (todayData.length >= 2) {
+            document.getElementById('today-chart-card').style.display = '';
+            buildTodayChart(todayData);
+        }
+    } catch (e) {
+        console.warn('Live data fetch failed:', e);
+    }
+}
+
+function buildTodayChart(readings) {
+    const labels = readings.map(r => {
+        const d = new Date(r.timestamp);
+        return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    });
+
+    const socData = readings.map(r => r.soc);
+    const pvData = readings.map(r => Math.max(0, r.pv_power || 0));
+
+    if (todayChartInstance) todayChartInstance.destroy();
+
+    todayChartInstance = new Chart(document.getElementById('today-chart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Battery SOC %',
+                    data: socData,
+                    borderColor: '#34d399',
+                    backgroundColor: 'rgba(52,211,153,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#34d399',
+                    yAxisID: 'y',
+                },
+                {
+                    label: 'Solar Power (W)',
+                    data: pvData,
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251,191,36,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#fbbf24',
+                    yAxisID: 'y1',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } } }
+            },
+            scales: {
+                x: {
+                    ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                },
+                y: {
+                    position: 'left',
+                    min: 0, max: 100,
+                    ticks: { color: '#34d399', callback: v => v + '%' },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    title: { display: true, text: 'SOC %', color: '#34d399' }
+                },
+                y1: {
+                    position: 'right',
+                    min: 0,
+                    ticks: { color: '#fbbf24', callback: v => v >= 1000 ? (v/1000).toFixed(1)+'kW' : v+'W' },
+                    grid: { display: false },
+                    title: { display: true, text: 'Solar', color: '#fbbf24' }
+                }
+            }
+        }
+    });
+}
+
+// Load live data and refresh every 5 minutes
+loadLiveData();
+setInterval(loadLiveData, 5 * 60 * 1000);
 
 // ── Accuracy Charts ──────────────────────────────────────────────────────────
 async function loadAccuracyCharts() {
