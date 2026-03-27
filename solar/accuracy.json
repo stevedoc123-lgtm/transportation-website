@@ -166,5 +166,17 @@
     "charge_target": 90.0,
     "actual_import": 97.9,
     "actual_export": 0.0
+  },
+  {
+    "date": "2026-03-26",
+    "pred_solar": 35.0,
+    "actual_solar": 37.6,
+    "solar_error_pct": -6.9,
+    "pred_load": 69.0,
+    "actual_load": 77.1,
+    "load_error_pct": -10.5,
+    "charge_target": 90.0,
+    "actual_import": 48.9,
+    "actual_export": 0.0
   }
 ]
