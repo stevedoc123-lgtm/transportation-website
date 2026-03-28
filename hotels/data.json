@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-03-27 11:05",
-  "as_of_date": "2026-03-26",
+  "generated_at": "2026-03-28 08:00",
+  "as_of_date": "2026-03-27",
   "portfolio": {
-    "yesterday_revenue": 29478.64,
-    "yesterday_avg_occupancy": 83.4,
+    "yesterday_revenue": 0,
+    "yesterday_avg_occupancy": 0,
     "mtd_revenue": 769599.12,
     "ytd_revenue": 7253930.59,
     "ytd_expenses": 6449672.69,
@@ -15,21 +15,8 @@
       "id": 1,
       "name": "Ballpark / Galleria",
       "rooms": 140,
-      "yesterday": {
-        "occupancy_pct": 70.68,
-        "adr_with_comps": 51.4,
-        "adr_without_comps": 51.4,
-        "room_revenue": 4831.74,
-        "total_revenue": 5516.72,
-        "rooms_occupied": 90,
-        "rooms_available": 133,
-        "cancellations": 20,
-        "no_shows": 1,
-        "walkins": 0,
-        "reservations_made": 15,
-        "total_guests": 177
-      },
-      "revpar": 36.33,
+      "yesterday": {},
+      "revpar": null,
       "mtd": {
         "avg_occ": 84.6,
         "avg_adr": 61.17,
@@ -38,9 +25,9 @@
         "days": 26
       },
       "last_7d": {
-        "avg_occ": 79.4,
-        "avg_adr": 59.99,
-        "total_rev": 50152.09
+        "avg_occ": 76.8,
+        "avg_adr": 58.57,
+        "total_rev": 40395.84
       },
       "trend_30d": [
         {
@@ -2324,21 +2311,8 @@
       "id": 2,
       "name": "Perimeter Medical",
       "rooms": 142,
-      "yesterday": {
-        "occupancy_pct": 91.04,
-        "adr_with_comps": 61.84,
-        "adr_without_comps": 61.84,
-        "room_revenue": 7544.0,
-        "total_revenue": 8485.19,
-        "rooms_occupied": 122,
-        "rooms_available": 134,
-        "cancellations": 22,
-        "no_shows": 0,
-        "walkins": 1,
-        "reservations_made": 38,
-        "total_guests": 211
-      },
-      "revpar": 56.3,
+      "yesterday": {},
+      "revpar": null,
       "mtd": {
         "avg_occ": 82.7,
         "avg_adr": 65.25,
@@ -2347,9 +2321,9 @@
         "days": 26
       },
       "last_7d": {
-        "avg_occ": 87.9,
-        "avg_adr": 66.81,
-        "total_rev": 63033.43
+        "avg_occ": 88.3,
+        "avg_adr": 64.86,
+        "total_rev": 52398.33
       },
       "trend_30d": [
         {
@@ -4668,21 +4642,8 @@
       "id": 3,
       "name": "Alpharetta",
       "rooms": 131,
-      "yesterday": {
-        "occupancy_pct": 91.54,
-        "adr_with_comps": 58.32,
-        "adr_without_comps": 58.32,
-        "room_revenue": 6939.53,
-        "total_revenue": 7936.84,
-        "rooms_occupied": 119,
-        "rooms_available": 130,
-        "cancellations": 13,
-        "no_shows": 0,
-        "walkins": 0,
-        "reservations_made": 42,
-        "total_guests": 173
-      },
-      "revpar": 53.38,
+      "yesterday": {},
+      "revpar": null,
       "mtd": {
         "avg_occ": 70.1,
         "avg_adr": 60.94,
@@ -4691,9 +4652,9 @@
         "days": 25
       },
       "last_7d": {
-        "avg_occ": 75.8,
-        "avg_adr": 59.89,
-        "total_rev": 47019.33
+        "avg_occ": 75.1,
+        "avg_adr": 58.71,
+        "total_rev": 39175.05
       },
       "trend_30d": [
         {
@@ -6914,21 +6875,8 @@
       "id": 4,
       "name": "Conyers",
       "rooms": 119,
-      "yesterday": {
-        "occupancy_pct": 80.17,
-        "adr_with_comps": 68.59,
-        "adr_without_comps": 68.59,
-        "room_revenue": 6378.8,
-        "total_revenue": 7539.89,
-        "rooms_occupied": 93,
-        "rooms_available": 116,
-        "cancellations": 9,
-        "no_shows": 0,
-        "walkins": 4,
-        "reservations_made": 21,
-        "total_guests": 138
-      },
-      "revpar": 54.99,
+      "yesterday": {},
+      "revpar": null,
       "mtd": {
         "avg_occ": 83.2,
         "avg_adr": 71.3,
@@ -6937,9 +6885,9 @@
         "days": 26
       },
       "last_7d": {
-        "avg_occ": 86.6,
-        "avg_adr": 75.15,
-        "total_rev": 62818.6
+        "avg_occ": 84.5,
+        "avg_adr": 71.87,
+        "total_rev": 50172.97
       },
       "trend_30d": [
         {
