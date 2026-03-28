@@ -126,6 +126,104 @@
         }
         .weather-row span b { color: rgba(255,255,255,0.85); }
 
+        /* ── Panel health alert ── */
+        .panel-alert {
+            border-radius: 14px;
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+        }
+        .panel-alert.critical {
+            background: rgba(248, 113, 113, 0.12);
+            border: 1px solid rgba(248, 113, 113, 0.4);
+        }
+        .panel-alert.warn {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+        }
+        .panel-alert.watch {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .panel-alert.ok {
+            background: rgba(52, 211, 153, 0.06);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+        .panel-alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            line-height: 1.3;
+        }
+        .panel-alert-body {
+            flex: 1;
+        }
+        .panel-alert-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 0.3rem;
+        }
+        .panel-alert-msg {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.4;
+        }
+        .panel-alert-details {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            display: flex;
+            gap: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .panel-alert-details span b {
+            color: rgba(255,255,255,0.65);
+        }
+        .panel-clean-btn {
+            margin-top: 0.7rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            padding: 0.45rem 1rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .panel-clean-btn:hover {
+            background: rgba(52, 211, 153, 0.15);
+            border-color: rgba(52, 211, 153, 0.4);
+            color: #34d399;
+        }
+        .panel-clean-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .clean-confirm {
+            display: none;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .clean-confirm button {
+            background: rgba(52, 211, 153, 0.2);
+            border: 1px solid rgba(52, 211, 153, 0.5);
+            color: #34d399;
+            border-radius: 6px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+        .clean-confirm .cancel-btn {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.5);
+        }
+
         /* ── Savings bar ── */
         .savings {
             background: rgba(255,255,255,0.04);
@@ -488,6 +586,39 @@ async function load() {
             <span>🌡️ <b>${fc.temp_min_f}° – ${fc.temp_max_f}°F</b></span>
             <span>📡 <b>${fc.shortwave_radiation} MJ/m²</b> radiation</span>
         </div>
+
+        <!-- Panel Health Alert -->
+        ${data.panel_health ? (() => {
+            const h = data.panel_health;
+            const icons = { critical: '🚨', warn: '⚠️', watch: '👀', ok: '✅' };
+            const icon = icons[h.severity] || '✅';
+            const pollenText = h.pollen_count ? \`<span>Pollen: <b>\${h.pollen_count.toLocaleString()}</b></span>\` : '';
+            const rainText = h.last_rain_date ? \`<span>Last rain: <b>\${h.days_since_rain} days ago</b> (\${h.last_rain_mm}mm)</span>\` : '';
+            const seasonText = h.pollen_season ? \`<span>Season: <b>\${h.pollen_season_name}</b></span>\` : '';
+            const cleanedText = h.last_manual_cleaning ? \`<span>Last cleaned: <b>\${h.days_since_manual_cleaning} days ago</b></span>\` : '';
+            const showCleanBtn = h.severity !== 'ok';
+            return \`
+            <div class="panel-alert \${h.severity}">
+                <div class="panel-alert-icon">\${icon}</div>
+                <div class="panel-alert-body">
+                    <div class="panel-alert-title">Panel Cleanliness</div>
+                    <div class="panel-alert-msg">\${h.message}</div>
+                    <div class="panel-alert-details">
+                        \${pollenText}\${rainText}\${cleanedText}\${seasonText}
+                    </div>
+                    \${showCleanBtn ? \`
+                    <button class="panel-clean-btn" id="clean-btn" onclick="showCleanConfirm()">
+                        I just cleaned the panels
+                    </button>
+                    <div class="clean-confirm" id="clean-confirm">
+                        Are you sure? <button onclick="logCleaning()">Yes, they're clean</button>
+                        <button class="cancel-btn" onclick="hideCleanConfirm()">Cancel</button>
+                    </div>
+                    <div id="clean-status" style="margin-top:0.4rem;font-size:0.8rem;min-height:1rem"></div>
+                    \` : ''}
+                </div>
+            </div>\`;
+        })() : ''}
 
         <!-- EV toggle -->
         <div class="ev-row">
@@ -971,6 +1102,63 @@ async function loadAccuracyCharts() {
         },
         options: { ...chartDefaults }
     });
+}
+
+// ── Panel Cleaning Log ──────────────────────────────────────────────────────
+function showCleanConfirm() {
+    document.getElementById('clean-confirm').style.display = 'block';
+}
+function hideCleanConfirm() {
+    document.getElementById('clean-confirm').style.display = 'none';
+}
+async function logCleaning() {
+    const btn = document.getElementById('clean-btn');
+    const confirm = document.getElementById('clean-confirm');
+    const status = document.getElementById('clean-status');
+
+    btn.disabled = true;
+    confirm.style.display = 'none';
+    status.textContent = 'Logging...';
+    status.style.color = 'rgba(255,255,255,0.5)';
+
+    try {
+        // Write to Supabase
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/panel_cleanings`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation',
+            },
+            body: JSON.stringify({
+                cleaned_at: new Date().toISOString(),
+                note: 'Logged from dashboard',
+            }),
+        });
+
+        if (resp.ok) {
+            btn.textContent = 'Logged!';
+            status.textContent = 'Panel cleaning recorded. Alert will clear on next update (7 PM).';
+            status.style.color = '#34d399';
+        } else {
+            const err = await resp.json();
+            // If table doesn't exist, store in localStorage as fallback
+            if (err.code === 'PGRST205' || resp.status === 404) {
+                localStorage.setItem('last_panel_cleaning', new Date().toISOString());
+                btn.textContent = 'Logged locally!';
+                status.textContent = 'Saved locally (Supabase table not set up yet). Run "python3 panel_health.py --cleaned" on the server to persist.';
+                status.style.color = '#fbbf24';
+            } else {
+                throw new Error(err.message || 'Write failed');
+            }
+        }
+    } catch (e) {
+        // Fallback to localStorage
+        localStorage.setItem('last_panel_cleaning', new Date().toISOString());
+        btn.textContent = 'Logged locally!';
+        status.textContent = 'Saved locally. Run "python3 panel_health.py --cleaned" to persist.';
+        status.style.color = '#fbbf24';
+    }
 }
 
 load();
