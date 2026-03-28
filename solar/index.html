@@ -588,37 +588,7 @@ async function load() {
         </div>
 
         <!-- Panel Health Alert -->
-        ${data.panel_health ? (() => {
-            const h = data.panel_health;
-            const icons = { critical: '🚨', warn: '⚠️', watch: '👀', ok: '✅' };
-            const icon = icons[h.severity] || '✅';
-            const pollenText = h.pollen_count ? \`<span>Pollen: <b>\${h.pollen_count.toLocaleString()}</b></span>\` : '';
-            const rainText = h.last_rain_date ? \`<span>Last rain: <b>\${h.days_since_rain} days ago</b> (\${h.last_rain_mm}mm)</span>\` : '';
-            const seasonText = h.pollen_season ? \`<span>Season: <b>\${h.pollen_season_name}</b></span>\` : '';
-            const cleanedText = h.last_manual_cleaning ? \`<span>Last cleaned: <b>\${h.days_since_manual_cleaning} days ago</b></span>\` : '';
-            const showCleanBtn = h.severity !== 'ok';
-            return \`
-            <div class="panel-alert \${h.severity}">
-                <div class="panel-alert-icon">\${icon}</div>
-                <div class="panel-alert-body">
-                    <div class="panel-alert-title">Panel Cleanliness</div>
-                    <div class="panel-alert-msg">\${h.message}</div>
-                    <div class="panel-alert-details">
-                        \${pollenText}\${rainText}\${cleanedText}\${seasonText}
-                    </div>
-                    \${showCleanBtn ? \`
-                    <button class="panel-clean-btn" id="clean-btn" onclick="showCleanConfirm()">
-                        I just cleaned the panels
-                    </button>
-                    <div class="clean-confirm" id="clean-confirm">
-                        Are you sure? <button onclick="logCleaning()">Yes, they're clean</button>
-                        <button class="cancel-btn" onclick="hideCleanConfirm()">Cancel</button>
-                    </div>
-                    <div id="clean-status" style="margin-top:0.4rem;font-size:0.8rem;min-height:1rem"></div>
-                    \` : ''}
-                </div>
-            </div>\`;
-        })() : ''}
+        <div id="panel-health-slot"></div>
 
         <!-- EV toggle -->
         <div class="ev-row">
@@ -670,6 +640,9 @@ async function load() {
     `;
 
     footer.textContent = `Last updated: ${data.generated_at} · Model accuracy — Solar R²: ${data.solar_r2} · Load R²: ${data.load_r2}`;
+
+    // ── Panel health alert ─────────────────────────────────────
+    renderPanelHealth(data.panel_health);
 
     // ── Load accuracy charts ────────────────────────────────────
     loadAccuracyCharts();
@@ -1102,6 +1075,39 @@ async function loadAccuracyCharts() {
         },
         options: { ...chartDefaults }
     });
+}
+
+// ── Panel Health Rendering ───────────────────────────────────────────────────
+function renderPanelHealth(h) {
+    const slot = document.getElementById('panel-health-slot');
+    if (!slot || !h) return;
+
+    const icons = { critical: '🚨', warn: '⚠️', watch: '👀', ok: '✅' };
+    const icon = icons[h.severity] || '✅';
+
+    let details = '';
+    if (h.pollen_count) details += '<span>Pollen: <b>' + h.pollen_count.toLocaleString() + '</b></span>';
+    if (h.last_rain_date) details += '<span>Last rain: <b>' + h.days_since_rain + ' days ago</b> (' + h.last_rain_mm + 'mm)</span>';
+    if (h.last_manual_cleaning) details += '<span>Last cleaned: <b>' + h.days_since_manual_cleaning + ' days ago</b></span>';
+    if (h.pollen_season) details += '<span>Season: <b>' + h.pollen_season_name + '</b></span>';
+
+    const showBtn = h.severity !== 'ok';
+
+    slot.innerHTML = '<div class="panel-alert ' + h.severity + '">'
+        + '<div class="panel-alert-icon">' + icon + '</div>'
+        + '<div class="panel-alert-body">'
+        + '<div class="panel-alert-title">Panel Cleanliness</div>'
+        + '<div class="panel-alert-msg">' + h.message + '</div>'
+        + '<div class="panel-alert-details">' + details + '</div>'
+        + (showBtn
+            ? '<button class="panel-clean-btn" id="clean-btn" onclick="showCleanConfirm()">'
+              + 'I just cleaned the panels</button>'
+              + '<div class="clean-confirm" id="clean-confirm">'
+              + 'Are you sure? <button onclick="logCleaning()">Yes, they\'re clean</button>'
+              + ' <button class="cancel-btn" onclick="hideCleanConfirm()">Cancel</button></div>'
+              + '<div id="clean-status" style="margin-top:0.4rem;font-size:0.8rem;min-height:1rem"></div>'
+            : '')
+        + '</div></div>';
 }
 
 // ── Panel Cleaning Log ──────────────────────────────────────────────────────
