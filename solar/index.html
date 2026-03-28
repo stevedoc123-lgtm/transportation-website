@@ -656,7 +656,14 @@ async function load() {
     const EV_KWH        = 30;
     const SPA_KWH       = 4;
 
-    let evOn = true;
+    // Remember EV toggle across refreshes
+    const savedEv = localStorage.getItem('ev_charging');
+    let evOn = savedEv !== null ? savedEv === 'true' : p.ev_charging !== false;
+
+    // Apply saved state immediately
+    document.getElementById('toggle-switch').classList.toggle('on', evOn);
+    document.getElementById('ev-label').textContent = evOn ? 'YES' : 'NO';
+    document.getElementById('ev-kwh').textContent   = evOn ? '— 30 kWh' : '— saving 30 kWh';
 
     function recalc() {
         const overnightLoads = SPA_KWH + (evOn ? EV_KWH : 0);
@@ -689,8 +696,12 @@ async function load() {
         document.getElementById('saving-annual').textContent  = `$${(dailySav * 365).toFixed(2)}`;
     }
 
+    // Recalc on load with saved EV state
+    recalc();
+
     document.getElementById('ev-toggle').addEventListener('click', () => {
         evOn = !evOn;
+        localStorage.setItem('ev_charging', evOn);
         document.getElementById('toggle-switch').classList.toggle('on', evOn);
         document.getElementById('ev-label').textContent = evOn ? 'YES' : 'NO';
         document.getElementById('ev-kwh').textContent   = evOn ? '— 30 kWh' : '— saving 30 kWh';
