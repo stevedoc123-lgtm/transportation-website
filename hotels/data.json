@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-03-28 20:00",
-  "as_of_date": "2026-03-27",
+  "generated_at": "2026-03-29 08:00",
+  "as_of_date": "2026-03-28",
   "portfolio": {
     "yesterday_revenue": 0,
     "yesterday_avg_occupancy": 0,
@@ -25,9 +25,9 @@
         "days": 26
       },
       "last_7d": {
-        "avg_occ": 76.8,
-        "avg_adr": 58.57,
-        "total_rev": 40395.84
+        "avg_occ": 73.0,
+        "avg_adr": 55.91,
+        "total_rev": 30200.0
       },
       "trend_30d": [
         {
@@ -2321,9 +2321,9 @@
         "days": 26
       },
       "last_7d": {
-        "avg_occ": 88.3,
-        "avg_adr": 64.86,
-        "total_rev": 52398.33
+        "avg_occ": 87.2,
+        "avg_adr": 63.08,
+        "total_rev": 41919.96
       },
       "trend_30d": [
         {
@@ -4652,9 +4652,9 @@
         "days": 25
       },
       "last_7d": {
-        "avg_occ": 75.1,
-        "avg_adr": 58.71,
-        "total_rev": 39175.05
+        "avg_occ": 73.7,
+        "avg_adr": 57.99,
+        "total_rev": 31691.17
       },
       "trend_30d": [
         {
@@ -6885,9 +6885,9 @@
         "days": 26
       },
       "last_7d": {
-        "avg_occ": 84.5,
-        "avg_adr": 71.87,
-        "total_rev": 50172.97
+        "avg_occ": 82.2,
+        "avg_adr": 67.28,
+        "total_rev": 37404.23
       },
       "trend_30d": [
         {
