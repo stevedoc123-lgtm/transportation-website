@@ -698,13 +698,20 @@ async function load() {
                 <span class="label">Annual run rate</span>
                 <span class="amount green" id="saving-annual">$${s.annual_savings}</span>
             </div>
-        <!-- Apply button -->
-        <div class="apply-section">
-            <button class="apply-btn" id="apply-btn" onclick="applySettings()">
-                ⚡ Apply Tonight's Settings to Sol-Ark
+        <!-- Charge Target Control -->
+        <div class="apply-section" style="padding:0 1.4rem 1rem">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.8rem">
+                <span style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4)">Set Charge Target</span>
+                <span style="font-size:1.8rem;font-weight:700;color:#fff" id="slider-val">${p.target_soc_pct}%</span>
+            </div>
+            <input type="range" id="charge-slider" min="20" max="100" step="5" value="${p.target_soc_pct}"
+                style="width:100%;accent-color:#e94560;height:8px;cursor:pointer;margin-bottom:1rem"
+                oninput="document.getElementById('slider-val').textContent=this.value+'%'">
+            <button class="apply-btn" id="apply-btn" onclick="applyToInverter()">
+                ⚡ Apply to Inverter
             </button>
             <div class="apply-status" id="apply-status">
-                Settings will be written to both inverters
+                Connected to Pi via Cloudflare Tunnel
             </div>
         </div>
 
@@ -785,53 +792,48 @@ async function load() {
     });
 }
 
-// ── Apply settings to inverter ───────────────────────────────────────────────
-// Agent URL is injected at deploy time via data.json
-async function applySettings() {
+// ── Apply charge target to inverter via Pi ───────────────────────────────────
+const PI_API = 'https://pi.getchargesmart.com';
+const PI_KEY = 'chargesmart-2026';
+
+async function applyToInverter() {
     const btn    = document.getElementById('apply-btn');
     const status = document.getElementById('apply-status');
-
-    // Get current target SOC from the live recalc
-    const heroText = document.getElementById('hero-soc')?.textContent || '';
-    const targetSoc = parseInt(heroText);
-    if (!targetSoc || isNaN(targetSoc)) {
-        status.textContent = '❌ Could not read charge target — reload the page';
-        status.className = 'apply-status error';
-        return;
-    }
+    const slider = document.getElementById('charge-slider');
+    const target = parseInt(slider.value);
 
     btn.disabled = true;
     btn.textContent = '⏳ Applying…';
-    status.textContent = `Writing ${targetSoc}% charge limit to both inverters...`;
+    status.textContent = `Writing ${target}% to inverter via Pi...`;
     status.className = 'apply-status';
 
     try {
-        const agentUrl = window._agentUrl;
-        if (!agentUrl || agentUrl.includes('YOUR-TUNNEL')) {
-            throw new Error('Agent not configured yet — Pi not set up');
-        }
-
-        const resp = await fetch(`${agentUrl}/apply`, {
+        const resp = await fetch(`${PI_API}/set-target`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Agent-Key': window._agentKey || '',
+                'X-Api-Key': PI_KEY,
             },
-            body: JSON.stringify({ target_soc_pct: targetSoc }),
+            body: JSON.stringify({ target }),
         });
 
         const result = await resp.json();
         if (result.success) {
-            btn.textContent = `✅ Applied — ${targetSoc}% set on both inverters`;
-            status.textContent = result.results.map(r =>
-                `${r.name}: ${r.confirmed}% confirmed`).join(' · ');
+            btn.textContent = `✅ Set to ${result.after}%`;
+            status.textContent = `Was ${result.before}% → now ${result.after}%`;
             status.className = 'apply-status success';
+            // Update hero display
+            document.getElementById('hero-soc').textContent = result.after + '%';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = '⚡ Apply to Inverter';
+            }, 3000);
         } else {
-            throw new Error(result.results?.map(r => r.error).join(', ') || 'Write failed');
+            throw new Error(result.error || `Read back ${result.after}%, expected ${target}%`);
         }
     } catch (e) {
         btn.disabled = false;
-        btn.textContent = '⚡ Apply Tonight\'s Settings to Sol-Ark';
+        btn.textContent = '⚡ Apply to Inverter';
         status.textContent = `❌ ${e.message}`;
         status.className = 'apply-status error';
     }
