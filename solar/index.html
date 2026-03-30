@@ -500,18 +500,93 @@ async function load() {
     const app    = document.getElementById('app');
     const footer = document.getElementById('footer');
 
+    // Try data.json first, then overlay with fresher Supabase data
     let data;
     try {
         const resp = await fetch('data.json?t=' + Date.now());
         data = await resp.json();
     } catch (e) {
-        app.innerHTML = `<div class="state-box"><h2>Could not load data</h2><p>${e.message}</p></div>`;
-        return;
+        data = null;
     }
 
-    // Inject agent config from data.json
-    window._agentUrl = data.agent_url || '';
-    window._agentKey = data.agent_key || '';
+    // Check Supabase for a newer prediction
+    try {
+        const predResp = await fetch(
+            `${SUPABASE_URL}/rest/v1/solar_predictions?order=target_date.desc&limit=1&scored=eq.false`,
+            { headers: { apikey: SUPABASE_KEY } }
+        );
+        const preds = await predResp.json();
+        if (preds.length > 0) {
+            const sp = preds[0];
+            const spDate = sp.target_date;
+            const djDate = data?.target_date;
+
+            // Use Supabase prediction if it's newer than data.json
+            if (!djDate || spDate > djDate) {
+                // Get latest live reading for current SOC
+                const liveResp = await fetch(
+                    `${SUPABASE_URL}/rest/v1/solar_readings?order=timestamp.desc&limit=1`,
+                    { headers: { apikey: SUPABASE_KEY } }
+                );
+                const live = (await liveResp.json())[0] || {};
+                const currentSoc = live.soc || 50;
+                const currentKwh = currentSoc / 100 * 80;
+
+                // Build data object from Supabase
+                const predSolar = sp.predicted_solar_kwh || 0;
+                const predLoad = sp.predicted_load_kwh || 0;
+                const chargeTarget = sp.charge_target_pct || 90;
+                const targetKwh = chargeTarget / 100 * 80;
+                const chargeNeeded = Math.max(0, targetKwh - currentKwh);
+                const solarGap = Math.max(0, predLoad - predSolar);
+                const RATE = 0.070;
+
+                data = {
+                    target_date: spDate,
+                    generated_at: new Date(sp.created_at).toLocaleString(),
+                    status: 'ok',
+                    solar_r2: data?.solar_r2 || 0.22,
+                    load_r2: data?.load_r2 || 0.18,
+                    prediction: {
+                        target_soc_pct: chargeTarget,
+                        current_soc_pct: currentSoc,
+                        current_kwh: Math.round(currentKwh * 10) / 10,
+                        target_kwh: Math.round(targetKwh * 10) / 10,
+                        predicted_solar_kwh: predSolar,
+                        predicted_load_kwh: predLoad,
+                        solar_gap_kwh: Math.round(solarGap * 10) / 10,
+                        charge_needed_kwh: Math.round(chargeNeeded * 10) / 10,
+                        overnight_loads_kwh: 34,
+                        ev_charging: true,
+                    },
+                    forecast: {
+                        cloud_cover_pct: sp.forecast_cloud_cover || 0,
+                        shortwave_radiation: sp.forecast_radiation || 0,
+                        sunshine_hours: 0,
+                        temp_min_f: 0,
+                        temp_max_f: 0,
+                    },
+                    savings: {
+                        current_nightly_kwh: 64,
+                        current_nightly_cost: 4.48,
+                        optimal_nightly_kwh: Math.round(chargeNeeded * 10) / 10,
+                        optimal_nightly_cost: Math.round(chargeNeeded * RATE * 100) / 100,
+                        daily_savings: Math.round((64 * RATE - chargeNeeded * RATE) * 100) / 100,
+                        monthly_savings: Math.round((64 * RATE - chargeNeeded * RATE) * 30 * 100) / 100,
+                        annual_savings: Math.round((64 * RATE - chargeNeeded * RATE) * 365 * 100) / 100,
+                    },
+                    source: 'supabase',
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('Supabase prediction fetch failed:', e);
+    }
+
+    if (!data) {
+        app.innerHTML = `<div class="state-box"><h2>Could not load data</h2><p>No data available</p></div>`;
+        return;
+    }
 
     if (data.status === 'pending') {
         app.innerHTML = `<div class="state-box"><h2>⏳ ${data.message}</h2><p>Check back after 7 PM</p></div>`;
@@ -639,7 +714,8 @@ async function load() {
         <div class="charts-section" id="charts-section"></div>
     `;
 
-    footer.textContent = `Last updated: ${data.generated_at} · Model accuracy — Solar R²: ${data.solar_r2} · Load R²: ${data.load_r2}`;
+    const src = data.source === 'supabase' ? ' · Live from Pi' : '';
+    footer.textContent = `Last updated: ${data.generated_at}${src} · Model accuracy — Solar R²: ${data.solar_r2} · Load R²: ${data.load_r2}`;
 
     // ── Panel health alert ─────────────────────────────────────
     renderPanelHealth(data.panel_health);
@@ -907,11 +983,38 @@ async function loadAccuracyCharts() {
 
     let acc;
     try {
-        const resp = await fetch('accuracy.json?t=' + Date.now());
-        acc = await resp.json();
+        // Try Supabase first for latest accuracy data
+        const sbResp = await fetch(
+            `${SUPABASE_URL}/rest/v1/solar_predictions?scored=eq.true&order=target_date.asc`,
+            { headers: { apikey: SUPABASE_KEY } }
+        );
+        const sbAcc = await sbResp.json();
+        if (sbAcc.length > 0) {
+            acc = sbAcc.map(r => ({
+                date: r.target_date,
+                pred_solar: r.predicted_solar_kwh,
+                actual_solar: r.actual_solar_kwh,
+                solar_error_pct: r.solar_error_pct,
+                pred_load: r.predicted_load_kwh,
+                actual_load: r.actual_load_kwh,
+                load_error_pct: r.load_error_pct,
+                charge_target: r.charge_target_pct,
+                actual_import: 0,
+                actual_export: 0,
+            }));
+        } else {
+            // Fall back to static file
+            const resp = await fetch('accuracy.json?t=' + Date.now());
+            acc = await resp.json();
+        }
     } catch (e) {
-        section.innerHTML = `<div class="no-accuracy">Accuracy tracking starts after the first full day of predictions.</div>`;
-        return;
+        try {
+            const resp = await fetch('accuracy.json?t=' + Date.now());
+            acc = await resp.json();
+        } catch (e2) {
+            section.innerHTML = `<div class="no-accuracy">Accuracy tracking starts after the first full day of predictions.</div>`;
+            return;
+        }
     }
 
     if (!acc || acc.length === 0) {
