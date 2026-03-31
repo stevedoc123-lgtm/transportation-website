@@ -611,19 +611,38 @@ function switchRange(days, btn) {
     buildChart(currentMetric);
 }
 
-// Load data
-fetch('data.json?v=' + Date.now())
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('main').style.display = 'block';
-        render(data);
-    })
-    .catch(err => {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error-msg').style.display = 'block';
-        document.getElementById('error-msg').textContent = 'Could not load data: ' + err.message;
-    });
+// Load data — try Supabase first, fall back to data.json
+const SB_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+
+async function loadData() {
+    let data = null;
+    try {
+        const resp = await fetch(
+            `${SB_URL}/rest/v1/hotel_portfolio?order=as_of_date.desc&limit=1`,
+            { headers: { apikey: SB_KEY } }
+        );
+        const rows = await resp.json();
+        if (rows.length > 0) data = rows[0].data;
+    } catch(e) { console.warn('Supabase fetch failed:', e); }
+
+    if (!data) {
+        try {
+            const resp = await fetch('data.json?v=' + Date.now());
+            data = await resp.json();
+        } catch(e) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-msg').style.display = 'block';
+            document.getElementById('error-msg').textContent = 'Could not load data: ' + e.message;
+            return;
+        }
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    render(data);
+}
+loadData();
 
 // ── P&L Section ────────────────────────────────────────────────────
 let pnlChartInstance = null;
@@ -794,12 +813,7 @@ function switchPnlChart(metric, btn) {
 }
 
 // Refresh every 10 minutes
-setInterval(() => {
-    fetch('data.json?v=' + Date.now())
-        .then(r => r.json())
-        .then(render)
-        .catch(() => {});
-}, 600000);
+setInterval(loadData, 600000);
 </script>
 </body>
 </html>
