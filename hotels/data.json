@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-03-31 08:00",
+  "generated_at": "2026-03-31 09:26",
   "as_of_date": "2026-03-30",
   "portfolio": {
-    "yesterday_revenue": 0,
-    "yesterday_avg_occupancy": 0,
-    "mtd_revenue": 769599.12,
+    "yesterday_revenue": 26788.41,
+    "yesterday_avg_occupancy": 81.4,
+    "mtd_revenue": 911612.07,
     "ytd_revenue": 7253930.59,
     "ytd_expenses": 6449672.69,
     "ytd_net_income": 227853.75,
@@ -15,19 +15,32 @@
       "id": 1,
       "name": "Ballpark / Galleria",
       "rooms": 140,
-      "yesterday": {},
-      "revpar": null,
+      "yesterday": {
+        "occupancy_pct": 72.57,
+        "adr_with_comps": 63.51,
+        "adr_without_comps": 63.51,
+        "room_revenue": 5207.44,
+        "total_revenue": 5938.94,
+        "rooms_occupied": 82,
+        "rooms_available": 113,
+        "cancellations": 11,
+        "no_shows": 6,
+        "walkins": 2,
+        "reservations_made": 34,
+        "total_guests": 142
+      },
+      "revpar": 46.08,
       "mtd": {
-        "avg_occ": 84.6,
-        "avg_adr": 61.17,
-        "total_rev": 189109.13,
-        "room_rev": 163061.29,
-        "days": 26
+        "avg_occ": 84.8,
+        "avg_adr": 62.34,
+        "total_rev": 224186.48,
+        "room_rev": 192896.27,
+        "days": 30
       },
       "last_7d": {
-        "avg_occ": 70.2,
-        "avg_adr": 56.4,
-        "total_rev": 18055.62
+        "avg_occ": 79.0,
+        "avg_adr": 64.15,
+        "total_rev": 53132.97
       },
       "trend_30d": [
         {
@@ -2304,6 +2317,34 @@
           "adr": 51.4,
           "revenue": 5516.72,
           "room_revenue": 4831.74
+        },
+        {
+          "report_date": "2026-03-27",
+          "occupancy_pct": 91.1,
+          "adr": 76.54,
+          "revenue": 10929.11,
+          "room_revenue": 9414.37
+        },
+        {
+          "report_date": "2026-03-28",
+          "occupancy_pct": 99.3,
+          "adr": 78.65,
+          "revenue": 12366.85,
+          "room_revenue": 10382.44
+        },
+        {
+          "report_date": "2026-03-29",
+          "occupancy_pct": 79.8,
+          "adr": 61.15,
+          "revenue": 5842.45,
+          "room_revenue": 4830.73
+        },
+        {
+          "report_date": "2026-03-30",
+          "occupancy_pct": 72.6,
+          "adr": 63.51,
+          "revenue": 5938.94,
+          "room_revenue": 5207.44
         }
       ]
     },
@@ -2311,19 +2352,32 @@
       "id": 2,
       "name": "Perimeter Medical",
       "rooms": 142,
-      "yesterday": {},
-      "revpar": null,
+      "yesterday": {
+        "occupancy_pct": 100.0,
+        "adr_with_comps": 59.31,
+        "adr_without_comps": 59.31,
+        "room_revenue": 6761.65,
+        "total_revenue": 7921.58,
+        "rooms_occupied": 114,
+        "rooms_available": 114,
+        "cancellations": 20,
+        "no_shows": 0,
+        "walkins": 0,
+        "reservations_made": 25,
+        "total_guests": 186
+      },
+      "revpar": 59.31,
       "mtd": {
-        "avg_occ": 82.7,
-        "avg_adr": 65.25,
-        "total_rev": 211442.44,
-        "room_rev": 183221.87,
-        "days": 26
+        "avg_occ": 84.0,
+        "avg_adr": 65.39,
+        "total_rev": 246184.55,
+        "room_rev": 214284.84,
+        "days": 30
       },
       "last_7d": {
-        "avg_occ": 87.5,
-        "avg_adr": 63.45,
-        "total_rev": 25304.94
+        "avg_occ": 90.4,
+        "avg_adr": 65.08,
+        "total_rev": 60047.05
       },
       "trend_30d": [
         {
@@ -4635,6 +4689,34 @@
           "adr": 61.84,
           "revenue": 8485.19,
           "room_revenue": 7544.0
+        },
+        {
+          "report_date": "2026-03-27",
+          "occupancy_pct": 83.9,
+          "adr": 70.96,
+          "revenue": 9061.67,
+          "room_revenue": 8160.95
+        },
+        {
+          "report_date": "2026-03-28",
+          "occupancy_pct": 92.0,
+          "adr": 73.54,
+          "revenue": 10044.33,
+          "room_revenue": 9266.5
+        },
+        {
+          "report_date": "2026-03-29",
+          "occupancy_pct": 94.1,
+          "adr": 61.37,
+          "revenue": 7714.53,
+          "room_revenue": 6873.87
+        },
+        {
+          "report_date": "2026-03-30",
+          "occupancy_pct": 100.0,
+          "adr": 59.31,
+          "revenue": 7921.58,
+          "room_revenue": 6761.65
         }
       ]
     },
@@ -4642,19 +4724,32 @@
       "id": 3,
       "name": "Alpharetta",
       "rooms": 131,
-      "yesterday": {},
-      "revpar": null,
+      "yesterday": {
+        "occupancy_pct": 76.92,
+        "adr_with_comps": 56.58,
+        "adr_without_comps": 56.58,
+        "room_revenue": 5658.1,
+        "total_revenue": 6522.08,
+        "rooms_occupied": 100,
+        "rooms_available": 130,
+        "cancellations": 11,
+        "no_shows": 0,
+        "walkins": 1,
+        "reservations_made": 46,
+        "total_guests": 147
+      },
+      "revpar": 43.52,
       "mtd": {
-        "avg_occ": 70.1,
-        "avg_adr": 60.94,
-        "total_rev": 158720.82,
-        "room_rev": 138851.16,
-        "days": 25
+        "avg_occ": 72.0,
+        "avg_adr": 60.76,
+        "total_rev": 188271.78,
+        "room_rev": 164791.82,
+        "days": 29
       },
       "last_7d": {
-        "avg_occ": 78.5,
-        "avg_adr": 57.72,
-        "total_rev": 20169.96
+        "avg_occ": 81.7,
+        "avg_adr": 58.8,
+        "total_rev": 49720.92
       },
       "trend_30d": [
         {
@@ -6868,6 +6963,34 @@
           "adr": 58.32,
           "revenue": 7936.84,
           "room_revenue": 6939.53
+        },
+        {
+          "report_date": "2026-03-27",
+          "occupancy_pct": 93.7,
+          "adr": 62.1,
+          "revenue": 8371.33,
+          "room_revenue": 7390.07
+        },
+        {
+          "report_date": "2026-03-28",
+          "occupancy_pct": 97.6,
+          "adr": 65.42,
+          "revenue": 9267.74,
+          "room_revenue": 8112.61
+        },
+        {
+          "report_date": "2026-03-29",
+          "occupancy_pct": 67.7,
+          "adr": 54.32,
+          "revenue": 5389.81,
+          "room_revenue": 4779.88
+        },
+        {
+          "report_date": "2026-03-30",
+          "occupancy_pct": 76.9,
+          "adr": 56.58,
+          "revenue": 6522.08,
+          "room_revenue": 5658.1
         }
       ]
     },
@@ -6875,19 +6998,32 @@
       "id": 4,
       "name": "Conyers",
       "rooms": 119,
-      "yesterday": {},
-      "revpar": null,
+      "yesterday": {
+        "occupancy_pct": 76.27,
+        "adr_with_comps": 61.41,
+        "adr_without_comps": 61.41,
+        "room_revenue": 5526.74,
+        "total_revenue": 6405.81,
+        "rooms_occupied": 90,
+        "rooms_available": 118,
+        "cancellations": 9,
+        "no_shows": 0,
+        "walkins": 1,
+        "reservations_made": 31,
+        "total_guests": 141
+      },
+      "revpar": 46.84,
       "mtd": {
-        "avg_occ": 83.2,
-        "avg_adr": 71.3,
-        "total_rev": 210326.73,
-        "room_rev": 179642.71,
-        "days": 26
+        "avg_occ": 84.1,
+        "avg_adr": 73.37,
+        "total_rev": 252969.26,
+        "room_rev": 216652.32,
+        "days": 30
       },
       "last_7d": {
-        "avg_occ": 81.8,
-        "avg_adr": 68.49,
-        "total_rev": 23632.36
+        "avg_occ": 86.6,
+        "avg_adr": 78.95,
+        "total_rev": 66274.89
       },
       "trend_30d": [
         {
@@ -9213,6 +9349,34 @@
           "adr": 68.59,
           "revenue": 7539.89,
           "room_revenue": 6378.8
+        },
+        {
+          "report_date": "2026-03-27",
+          "occupancy_pct": 96.6,
+          "adr": 107.11,
+          "revenue": 13952.18,
+          "room_revenue": 12103.82
+        },
+        {
+          "report_date": "2026-03-28",
+          "occupancy_pct": 97.4,
+          "adr": 104.89,
+          "revenue": 13620.49,
+          "room_revenue": 11852.56
+        },
+        {
+          "report_date": "2026-03-29",
+          "occupancy_pct": 90.3,
+          "adr": 73.79,
+          "revenue": 8664.05,
+          "room_revenue": 7526.49
+        },
+        {
+          "report_date": "2026-03-30",
+          "occupancy_pct": 76.3,
+          "adr": 61.41,
+          "revenue": 6405.81,
+          "room_revenue": 5526.74
         }
       ]
     }
