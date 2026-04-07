@@ -365,7 +365,6 @@
 <script>
 const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
-const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1481812099259826370/I__eWBIYtXWDF39iylv9iNBlG6sJIUxegIT0fmIMoHO-2Ukj8GYaHfEUXju-BLW6_lpT';
 const SHOW_SLUG = 'turpentine';
 const SHOW_NAME = 'TURPENTINE';
 
@@ -449,35 +448,15 @@ async function submitForm(e, type) {
         console.warn('Supabase save failed:', err);
     }
 
-    // Send to Discord
+    // Send email notification via Netlify function
     try {
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-
-        const formType = type === 'run' ? 'RUN REQUEST' : 'EQUIPMENT REQUEST';
-        let fields = [];
-        for (const [key, val] of Object.entries(obj)) {
-            if (key === 'show_slug' || key === 'form_type' || !val) continue;
-            const label = key.replace(/_/g, ' ').toUpperCase();
-            fields.push({ name: label, value: String(val).substring(0, 1024), inline: val.length < 40 });
-        }
-
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch('/.netlify/functions/send-run-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: `${SHOW_NAME} — ${formType}`,
-                    description: dateStr,
-                    color: 0xd4a953,
-                    fields: fields,
-                    footer: { text: 'Film Transportation Services' },
-                    timestamp: now.toISOString(),
-                }]
-            }),
+            body: JSON.stringify({ show_slug: SHOW_SLUG, show_name: SHOW_NAME, form_type: type, data: obj }),
         });
     } catch (err) {
-        console.warn('Discord notification failed:', err);
+        console.warn('Email notification failed:', err);
     }
 
     // Show success
