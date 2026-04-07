@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turpentine — Transportation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a1a 50%, #2a1a0a 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding-bottom: 3rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+
+        /* ── Show Header ── */
+        .show-header {
+            padding: 2rem 0;
+            text-align: center;
+            border-bottom: 2px solid rgba(212, 169, 83, 0.3);
+            margin-bottom: 2rem;
+        }
+        .show-logo {
+            width: 200px;
+            max-height: 120px;
+            margin-bottom: 0.5rem;
+            object-fit: contain;
+        }
+        .show-name {
+            font-size: 2.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            background: linear-gradient(135deg, #d4a953, #f5d78e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        .show-subtitle {
+            font-size: 1rem;
+            color: rgba(212, 169, 83, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-top: 0.3rem;
+        }
+        .show-dept {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            margin-top: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(212, 169, 83, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.5);
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: rgba(212, 169, 83, 0.12);
+            border-color: rgba(212, 169, 83, 0.5);
+            color: #d4a953;
+        }
+        .tab:hover { border-color: rgba(212, 169, 83, 0.4); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ── Form Styles ── */
+        .form-container {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(212, 169, 83, 0.15);
+            border-radius: 20px;
+            padding: 2.5rem;
+        }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(212, 169, 83, 0.2);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #d4a953;
+            box-shadow: 0 0 15px rgba(212, 169, 83, 0.15);
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+        .checkbox-group label {
+            display: flex; align-items: center;
+            font-weight: normal; cursor: pointer; text-transform: none; font-size: 0.95rem;
+            color: rgba(255,255,255,0.7);
+        }
+        .checkbox-group input { margin-right: 0.5rem; width: auto; }
+
+        .section-title {
+            margin: 2rem 0 1rem;
+            color: #d4a953;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(212, 169, 83, 0.2);
+            padding-bottom: 0.5rem;
+        }
+        .required { color: #d4a953; }
+
+        button[type="submit"] {
+            background: linear-gradient(135deg, #d4a953, #b8892e);
+            color: #0a0a0f;
+            padding: 16px 50px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(212, 169, 83, 0.3);
+        }
+        button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .success-msg {
+            display: none;
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.4);
+            border-radius: 14px;
+            padding: 1.5rem;
+            text-align: center;
+            color: #34d399;
+            margin-bottom: 1.5rem;
+        }
+
+        footer {
+            text-align: center;
+            color: rgba(255,255,255,0.2);
+            font-size: 0.75rem;
+            padding: 2rem 0 1rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="show-header">
+        <div id="show-logo-wrap"></div>
+        <div class="show-name">Turpentine</div>
+        <div class="show-subtitle">A Thriller</div>
+        <div class="show-dept">Transportation Department</div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('run')">Run Request</div>
+        <div class="tab" onclick="switchTab('equip')">Special Equipment</div>
+    </div>
+
+    <!-- ── Run Request Form ── -->
+    <div class="tab-content active" id="tab-run">
+        <div class="form-container">
+            <div class="success-msg" id="run-success">Submitted! Your team has been notified.</div>
+            <form id="run-form" onsubmit="return submitForm(event, 'run')">
+                <input type="hidden" name="show_slug" value="turpentine">
+                <input type="hidden" name="form_type" value="run-request">
+
+                <h3 class="section-title">Requestor Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Requestor Name <span class="required">*</span></label>
+                        <input type="text" name="requestor_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Department <span class="required">*</span></label>
+                        <input type="text" name="department" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" name="phone" placeholder="(555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" placeholder="you@production.com">
+                    </div>
+                </div>
+
+                <h3 class="section-title">Run Details</h3>
+                <div class="form-group">
+                    <label>Type of Request <span class="required">*</span></label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="request_type" value="Pick-Up"> Pick-Up</label>
+                        <label><input type="checkbox" name="request_type" value="Delivery"> Delivery</label>
+                        <label><input type="checkbox" name="request_type" value="Exchange"> Exchange</label>
+                        <label><input type="checkbox" name="request_type" value="Return"> Return</label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Date of Run <span class="required">*</span></label><input type="date" name="date_of_run" required></div>
+                    <div class="form-group"><label>Date Needed <span class="required">*</span></label><input type="date" name="date_needed" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Time of Run <span class="required">*</span></label><input type="time" name="time_of_run" required></div>
+                    <div class="form-group"><label>Time Needed <span class="required">*</span></label><input type="time" name="time_needed" required></div>
+                </div>
+                <div class="form-group">
+                    <label>Payment Option</label>
+                    <div class="checkbox-group">
+                        <label><input type="radio" name="payment_option" value="PO"> PO</label>
+                        <label><input type="radio" name="payment_option" value="Cash"> Cash</label>
+                        <label><input type="radio" name="payment_option" value="Check"> Check</label>
+                        <label><input type="radio" name="payment_option" value="No Payment Required" checked> No Payment Required</label>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Pickup Information</h3>
+                <div class="form-group">
+                    <label>Pickup Contact / Vendor <span class="required">*</span></label>
+                    <input type="text" name="pickup_contact" required>
+                </div>
+                <div class="form-group">
+                    <label>Pickup Address <span class="required">*</span></label>
+                    <input type="text" name="pickup_address" placeholder="Street, City, State, ZIP" required>
+                </div>
+
+                <h3 class="section-title">Delivery Information</h3>
+                <div class="form-group">
+                    <label>Delivery Contact / Vendor <span class="required">*</span></label>
+                    <input type="text" name="delivery_contact" required>
+                </div>
+                <div class="form-group">
+                    <label>Delivery Phone <span class="required">*</span></label>
+                    <input type="tel" name="delivery_phone" placeholder="(555) 123-4567" required>
+                </div>
+                <div class="form-group">
+                    <label>Delivery Address <span class="required">*</span></label>
+                    <input type="text" name="delivery_address" placeholder="Street, City, State, ZIP" required>
+                </div>
+
+                <h3 class="section-title">Vehicle & Details</h3>
+                <div class="form-group">
+                    <label>Vehicle Type Needed</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="vehicle_type" value="Van"> Van</label>
+                        <label><input type="checkbox" name="vehicle_type" value="Stakebed"> Stakebed</label>
+                        <label><input type="checkbox" name="vehicle_type" value="Box Truck"> Box Truck</label>
+                        <label><input type="checkbox" name="vehicle_type" value="Special Vehicle"> Special Vehicle</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description of Items</label>
+                    <textarea name="item_description" rows="3" placeholder="What needs to be transported?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Special Instructions</label>
+                    <textarea name="instructions" rows="3" placeholder="Any special handling or vehicle requirements?"></textarea>
+                </div>
+
+                <button type="submit" id="run-submit">Submit Run Request</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Equipment Request Form ── -->
+    <div class="tab-content" id="tab-equip">
+        <div class="form-container">
+            <div class="success-msg" id="equip-success">Submitted! Your team has been notified.</div>
+            <form id="equip-form" onsubmit="return submitForm(event, 'equip')">
+                <input type="hidden" name="show_slug" value="turpentine">
+                <input type="hidden" name="form_type" value="equipment-request">
+
+                <h3 class="section-title">Requestor Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Requestor Name <span class="required">*</span></label>
+                        <input type="text" name="requestor_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Department <span class="required">*</span></label>
+                        <input type="text" name="department" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" placeholder="you@production.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" name="phone" placeholder="(555) 123-4567">
+                    </div>
+                </div>
+
+                <h3 class="section-title">Equipment Details</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Date of Request</label><input type="date" name="date_of_request"></div>
+                    <div class="form-group"><label>Date Needed <span class="required">*</span></label><input type="date" name="date_needed" required></div>
+                </div>
+                <div class="form-group"><label>Time Needed</label><input type="time" name="time_needed"></div>
+                <div class="form-group">
+                    <label>Items to be Ordered <span class="required">*</span></label>
+                    <textarea name="items_ordered" rows="4" placeholder="List all equipment needed..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Set Name / Usage</label>
+                    <input type="text" name="set_name" placeholder="Where will this be used?">
+                </div>
+
+                <h3 class="section-title">Delivery Information</h3>
+                <div class="form-group">
+                    <label>Delivery Address <span class="required">*</span></label>
+                    <input type="text" name="delivery_address" placeholder="Street, City, State, ZIP" required>
+                </div>
+
+                <h3 class="section-title">Return Information</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Date of Return</label><input type="date" name="return_date"></div>
+                    <div class="form-group"><label>Time to Return</label><input type="time" name="return_time"></div>
+                </div>
+
+                <button type="submit" id="equip-submit">Submit Equipment Request</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>Film Transportation Services</footer>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
+const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1481812099259826370/I__eWBIYtXWDF39iylv9iNBlG6sJIUxegIT0fmIMoHO-2Ukj8GYaHfEUXju-BLW6_lpT';
+const SHOW_SLUG = 'turpentine';
+const SHOW_NAME = 'TURPENTINE';
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    if (tab === 'run') {
+        document.querySelectorAll('.tab')[0].classList.add('active');
+        document.getElementById('tab-run').classList.add('active');
+    } else {
+        document.querySelectorAll('.tab')[1].classList.add('active');
+        document.getElementById('tab-equip').classList.add('active');
+    }
+}
+
+async function submitForm(e, type) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const successEl = document.getElementById(type + '-success');
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    const data = new FormData(form);
+    const obj = {};
+    data.forEach((val, key) => {
+        if (obj[key]) {
+            obj[key] = Array.isArray(obj[key]) ? [...obj[key], val] : [obj[key], val];
+        } else {
+            obj[key] = val;
+        }
+    });
+
+    // Flatten arrays to comma-separated strings
+    for (const k in obj) {
+        if (Array.isArray(obj[k])) obj[k] = obj[k].join(', ');
+    }
+
+    // Store in Supabase
+    try {
+        const showResp = await fetch(`${SUPABASE_URL}/rest/v1/shows?slug=eq.${SHOW_SLUG}&select=id`, {
+            headers: { apikey: SUPABASE_KEY }
+        });
+        const shows = await showResp.json();
+        const showId = shows[0]?.id;
+
+        if (type === 'run' && showId) {
+            await fetch(`${SUPABASE_URL}/rest/v1/run_requests`, {
+                method: 'POST',
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    Prefer: 'return=minimal',
+                },
+                body: JSON.stringify({
+                    show_id: showId,
+                    requestor_name: obj.requestor_name,
+                    department: obj.department,
+                    phone: obj.phone,
+                    email: obj.email,
+                    request_type: obj.request_type,
+                    date_of_run: obj.date_of_run || null,
+                    date_needed: obj.date_needed || null,
+                    time_of_run: obj.time_of_run,
+                    time_needed: obj.time_needed,
+                    payment_option: obj.payment_option,
+                    pickup_contact: obj.pickup_contact,
+                    pickup_address: obj.pickup_address,
+                    delivery_contact: obj.delivery_contact,
+                    delivery_phone: obj.delivery_phone,
+                    delivery_address: obj.delivery_address,
+                    vehicle_type: obj.vehicle_type,
+                    item_description: obj.item_description,
+                    instructions: obj.instructions,
+                }),
+            });
+        }
+    } catch (err) {
+        console.warn('Supabase save failed:', err);
+    }
+
+    // Send to Discord
+    try {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+        const formType = type === 'run' ? 'RUN REQUEST' : 'EQUIPMENT REQUEST';
+        let fields = [];
+        for (const [key, val] of Object.entries(obj)) {
+            if (key === 'show_slug' || key === 'form_type' || !val) continue;
+            const label = key.replace(/_/g, ' ').toUpperCase();
+            fields.push({ name: label, value: String(val).substring(0, 1024), inline: val.length < 40 });
+        }
+
+        await fetch(DISCORD_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: `${SHOW_NAME} — ${formType}`,
+                    description: dateStr,
+                    color: 0xd4a953,
+                    fields: fields,
+                    footer: { text: 'Film Transportation Services' },
+                    timestamp: now.toISOString(),
+                }]
+            }),
+        });
+    } catch (err) {
+        console.warn('Discord notification failed:', err);
+    }
+
+    // Show success
+    successEl.style.display = 'block';
+    btn.textContent = 'Submitted!';
+    form.reset();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    setTimeout(() => {
+        successEl.style.display = 'none';
+        btn.disabled = false;
+        btn.textContent = type === 'run' ? 'Submit Run Request' : 'Submit Equipment Request';
+    }, 5000);
+
+    return false;
+}
+</script>
+</body>
+</html>
