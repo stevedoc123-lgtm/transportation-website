@@ -207,7 +207,19 @@
                     </div>
                     <div class="form-group">
                         <label>Department <span class="required">*</span></label>
-                        <input type="text" name="department" required>
+                        <select name="department" required>
+                            <option value="">Select Department</option>
+                            <option>Production</option>
+                            <option>Camera</option>
+                            <option>Set Lighting</option>
+                            <option>Grip</option>
+                            <option>Sound/Video</option>
+                            <option>SPFX</option>
+                            <option>Costumes</option>
+                            <option>Props</option>
+                            <option>Crafty</option>
+                            <option>Other</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row">
@@ -236,8 +248,12 @@
                     <div class="form-group"><label>Date Needed <span class="required">*</span></label><input type="date" name="date_needed" required></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Time of Run <span class="required">*</span></label><input type="time" name="time_of_run" required></div>
-                    <div class="form-group"><label>Time Needed <span class="required">*</span></label><input type="time" name="time_needed" required></div>
+                    <div class="form-group"><label>Time of Run <span class="required">*</span></label>
+                        <select name="time_of_run" required id="time_of_run"></select>
+                    </div>
+                    <div class="form-group"><label>Time Needed <span class="required">*</span></label>
+                        <select name="time_needed" required id="time_needed"></select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Payment Option</label>
@@ -256,7 +272,7 @@
                 </div>
                 <div class="form-group">
                     <label>Pickup Address <span class="required">*</span></label>
-                    <input type="text" name="pickup_address" placeholder="Street, City, State, ZIP" required>
+                    <input type="text" name="pickup_address" id="pickup_address" placeholder="Start typing an address..." autocomplete="off" required>
                 </div>
 
                 <h3 class="section-title">Delivery Information</h3>
@@ -270,7 +286,7 @@
                 </div>
                 <div class="form-group">
                     <label>Delivery Address <span class="required">*</span></label>
-                    <input type="text" name="delivery_address" placeholder="Street, City, State, ZIP" required>
+                    <input type="text" name="delivery_address" id="delivery_address" placeholder="Start typing an address..." autocomplete="off" required>
                 </div>
 
                 <h3 class="section-title">Vehicle & Details</h3>
@@ -313,7 +329,19 @@
                     </div>
                     <div class="form-group">
                         <label>Department <span class="required">*</span></label>
-                        <input type="text" name="department" required>
+                        <select name="department" required>
+                            <option value="">Select Department</option>
+                            <option>Production</option>
+                            <option>Camera</option>
+                            <option>Set Lighting</option>
+                            <option>Grip</option>
+                            <option>Sound/Video</option>
+                            <option>SPFX</option>
+                            <option>Costumes</option>
+                            <option>Props</option>
+                            <option>Crafty</option>
+                            <option>Other</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row">
@@ -345,7 +373,7 @@
                 <h3 class="section-title">Delivery Information</h3>
                 <div class="form-group">
                     <label>Delivery Address <span class="required">*</span></label>
-                    <input type="text" name="delivery_address" placeholder="Street, City, State, ZIP" required>
+                    <input type="text" name="delivery_address" id="equip_delivery_address" placeholder="Start typing an address..." autocomplete="off" required>
                 </div>
 
                 <h3 class="section-title">Return Information</h3>
@@ -363,6 +391,75 @@
 </div>
 
 <script>
+// ── Populate time dropdowns (15-min intervals) ──
+function populateTimeDropdowns() {
+    const selects = document.querySelectorAll('select[name="time_of_run"], select[name="time_needed"]');
+    selects.forEach(sel => {
+        sel.innerHTML = '<option value="">Select Time</option>';
+        for (let h = 0; h < 24; h++) {
+            for (let m = 0; m < 60; m += 15) {
+                const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                const ampm = h < 12 ? 'AM' : 'PM';
+                const label = `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+                const val = `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+                sel.innerHTML += `<option value="${val}">${label}</option>`;
+            }
+        }
+    });
+}
+populateTimeDropdowns();
+
+// ── Address autocomplete using browser + Nominatim (free, no API key) ──
+function initAddressAutocomplete() {
+    const fields = ['pickup_address', 'delivery_address', 'equip_delivery_address'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        let debounce = null;
+        const dropdown = document.createElement('div');
+        dropdown.style.cssText = 'position:absolute;z-index:999;background:#1a1a2e;border:1px solid rgba(212,169,83,0.3);border-radius:8px;max-height:200px;overflow-y:auto;display:none;width:100%;left:0;top:100%';
+        el.parentElement.style.position = 'relative';
+        el.parentElement.appendChild(dropdown);
+
+        el.addEventListener('input', () => {
+            clearTimeout(debounce);
+            const q = el.value.trim();
+            if (q.length < 4) { dropdown.style.display = 'none'; return; }
+
+            debounce = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=us`, {
+                        headers: { 'Accept-Language': 'en' }
+                    });
+                    const results = await resp.json();
+                    if (!results.length) { dropdown.style.display = 'none'; return; }
+
+                    dropdown.innerHTML = '';
+                    results.forEach(r => {
+                        const opt = document.createElement('div');
+                        opt.textContent = r.display_name;
+                        opt.style.cssText = 'padding:10px 12px;cursor:pointer;font-size:0.9rem;color:rgba(255,255,255,0.8);border-bottom:1px solid rgba(255,255,255,0.05)';
+                        opt.onmouseenter = () => opt.style.background = 'rgba(212,169,83,0.1)';
+                        opt.onmouseleave = () => opt.style.background = 'transparent';
+                        opt.onclick = () => {
+                            el.value = r.display_name;
+                            dropdown.style.display = 'none';
+                        };
+                        dropdown.appendChild(opt);
+                    });
+                    dropdown.style.display = 'block';
+                } catch(e) { dropdown.style.display = 'none'; }
+            }, 300);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!el.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+        });
+    });
+}
+initAddressAutocomplete();
+
 const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
 const SHOW_SLUG = 'perfect';
