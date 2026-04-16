@@ -1,43 +1,62 @@
 {
-  "target_date": "2026-03-28",
+  "target_date": "2026-04-17",
   "forecast": {
-    "date": "2026-03-28",
-    "cloud_cover_pct": 36,
-    "shortwave_radiation": 25.68,
-    "sunshine_hours": 11.0,
-    "temp_max_f": 65.5,
-    "temp_min_f": 42.4
+    "date": "2026-04-17",
+    "cloud_cover_pct": 18,
+    "shortwave_radiation": 26.78,
+    "sunshine_hours": 11.858177777777778,
+    "temp_max_f": 87.4,
+    "temp_min_f": 62.9
   },
-  "solar_r2": 0.216,
-  "load_r2": 0.182,
+  "solar_r2": 0.309,
+  "load_r2": 0.139,
   "prediction": {
-    "current_soc_pct": 76.0,
-    "current_kwh": 60.8,
-    "target_soc_pct": 90.0,
-    "target_kwh": 72.0,
-    "charge_needed_kwh": 11.2,
-    "predicted_solar_kwh": 37.0,
-    "predicted_load_kwh": 66.3,
-    "solar_gap_kwh": 29.3,
-    "overnight_loads_kwh": 34.0,
-    "ev_charging": true
+    "current_soc_pct": 28.0,
+    "current_kwh": 22.4,
+    "target_soc_pct": 75,
+    "target_kwh": 60.0,
+    "charge_needed_kwh": 37.6,
+    "predicted_solar_kwh": 29.2,
+    "predicted_load_kwh": 66.7,
+    "solar_gap_kwh": 37.4,
+    "overnight_loads_kwh": 0,
+    "ev_charging": false
   },
   "savings": {
     "current_nightly_kwh": 64.0,
     "current_nightly_cost": 4.48,
-    "optimal_nightly_kwh": 11.2,
-    "optimal_nightly_cost": 0.78,
-    "daily_savings": 3.7,
-    "monthly_savings": 110.88,
-    "annual_savings": 1349.04
+    "optimal_nightly_kwh": 37.6,
+    "optimal_nightly_cost": 2.63,
+    "daily_savings": 1.85,
+    "monthly_savings": 55.44,
+    "annual_savings": 674.52
   },
-  "generated_at": "2026-03-27 11:17",
+  "generated_at": "2026-04-16 13:14",
   "status": "ok",
   "agent_configured": false,
   "accuracy": {
-    "days_scored": 15,
-    "recent_avg_solar_error_pct": 29.3,
-    "recent_avg_load_error_pct": 20.0,
-    "last_scored": "2026-03-26"
+    "days_scored": 17,
+    "recent_avg_solar_error_pct": 23.7,
+    "recent_avg_load_error_pct": 20.4,
+    "last_scored": "2026-03-28"
+  },
+  "panel_health": {
+    "severity": "critical",
+    "message": "Panel wash recommended! No rain or cleaning in 30 days during tree pollen season and pollen count is high (713). Dirty panels could be cutting production 15-25%.",
+    "pollen_season": true,
+    "pollen_season_name": "Tree pollen",
+    "pollen_count": 713,
+    "pollen_source": "Atlanta Allergy & Asthma",
+    "pollen_error": null,
+    "days_since_rain": 30,
+    "last_rain_date": null,
+    "last_rain_mm": 0,
+    "days_since_clean": 30,
+    "last_clean_date": null,
+    "last_clean_type": null,
+    "last_manual_cleaning": null,
+    "days_since_manual_cleaning": null,
+    "next_rain_forecast": null,
+    "checked_at": "2026-04-16 13:14"
   }
 }
