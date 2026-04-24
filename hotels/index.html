@@ -340,24 +340,35 @@
         </div>
 
         <!-- P&L Section -->
-        <div class="section-label">2025 Profit & Loss</div>
+        <div class="section-label" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            <span>Profit &amp; Loss</span>
+            <span id="pnl-period-tabs" style="display:none;gap:0.4rem;flex-wrap:wrap">
+                <button class="chart-tab pnl-period-tab" data-period="y2026" onclick="switchPnlPeriod(this)">2026 YTD</button>
+                <button class="chart-tab pnl-period-tab" data-period="y2025" onclick="switchPnlPeriod(this)">2025 (Apr–Dec)</button>
+                <button class="chart-tab pnl-period-tab" data-period="all" onclick="switchPnlPeriod(this)">All months</button>
+            </span>
+            <span id="pnl-period-sub" style="color:rgba(255,255,255,0.35);text-transform:none;letter-spacing:0;font-size:0.78rem;margin-left:auto"></span>
+        </div>
+
+        <!-- Highlights callout -->
+        <div id="pnl-highlights" style="display:none;margin-bottom:1rem"></div>
 
         <!-- P&L Portfolio Summary -->
         <div class="hero" id="pnl-hero" style="display:none">
             <div class="hero-card">
-                <div class="hero-label">YTD Revenue</div>
+                <div class="hero-label" id="pnl-rev-label">Revenue</div>
                 <div class="hero-value" id="pnl-ytd-rev">—</div>
                 <div class="hero-sub">All 4 properties</div>
             </div>
             <div class="hero-card">
-                <div class="hero-label">YTD Net Income</div>
+                <div class="hero-label" id="pnl-net-label">Net Income</div>
                 <div class="hero-value" id="pnl-ytd-net">—</div>
                 <div class="hero-sub" id="pnl-ytd-margin">—</div>
             </div>
             <div class="hero-card">
-                <div class="hero-label">YTD Expenses</div>
+                <div class="hero-label" id="pnl-exp-label">Expenses</div>
                 <div class="hero-value" id="pnl-ytd-exp">—</div>
-                <div class="hero-sub">Operating expenses</div>
+                <div class="hero-sub" id="pnl-noi-sub">Operating expenses</div>
             </div>
         </div>
 
@@ -367,8 +378,11 @@
                 <thead>
                     <tr>
                         <th>Property</th>
-                        <th>YTD Revenue</th>
-                        <th>YTD Expenses</th>
+                        <th>Mo</th>
+                        <th>Occ %</th>
+                        <th>ADR</th>
+                        <th>Revenue</th>
+                        <th>Expenses</th>
                         <th>NOI</th>
                         <th>Net Income</th>
                         <th>Margin</th>
@@ -599,7 +613,7 @@ function buildChart(metric) {
 }
 
 function switchChart(metric, btn) {
-    document.querySelectorAll('.chart-tab:not(.range-tab)').forEach(t => t.classList.remove('active'));
+    btn.parentElement.querySelectorAll('.chart-tab:not(.range-tab)').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     buildChart(metric);
 }
@@ -647,64 +661,182 @@ loadData();
 // ── P&L Section ────────────────────────────────────────────────────
 let pnlChartInstance = null;
 let pnlData = null;
+let pnlPortfolioByYear = null;
 let currentPnlMetric = 'revenue';
+let currentPnlPeriod = 'y2026';  // y2026 | y2025 | all
+
+function periodMatch(m) {
+    if (currentPnlPeriod === 'all') return true;
+    const y = parseInt(currentPnlPeriod.slice(1));
+    return m.year === y;
+}
+
+// Aggregate a hotel's monthly rows for the current period. Returns {revenue, expenses, noi,
+// net_income, margin_pct, months, avg_occ, avg_adr}. Occupancy/ADR are revenue-weighted so
+// months with more business pull the average.
+function aggregateHotel(h) {
+    const months = h.monthly.filter(periodMatch);
+    const agg = {revenue:0, expenses:0, noi:0, net_income:0, months: months.length,
+                 _occ_num:0, _occ_den:0, _adr_num:0, _adr_den:0};
+    months.forEach(m => {
+        agg.revenue += m.total_revenue || 0;
+        agg.expenses += m.total_expenses || 0;
+        agg.noi += m.net_operating_income || 0;
+        agg.net_income += m.net_income || 0;
+        if (m.occupancy_pct != null && m.total_revenue) {
+            agg._occ_num += m.occupancy_pct * m.total_revenue;
+            agg._occ_den += m.total_revenue;
+        }
+        if (m.adr != null && m.total_revenue) {
+            agg._adr_num += m.adr * m.total_revenue;
+            agg._adr_den += m.total_revenue;
+        }
+    });
+    agg.margin_pct = agg.revenue ? (agg.net_income / agg.revenue * 100) : 0;
+    agg.avg_occ = agg._occ_den ? (agg._occ_num / agg._occ_den) : null;
+    agg.avg_adr = agg._adr_den ? (agg._adr_num / agg._adr_den) : null;
+    return agg;
+}
+
+function periodLabel() {
+    if (currentPnlPeriod === 'y2026') return '2026 YTD';
+    if (currentPnlPeriod === 'y2025') return '2025';
+    return 'All months';
+}
 
 function renderPnL(data) {
     pnlData = data.pandl;
     if (!pnlData || pnlData.length === 0) return;
+    pnlPortfolioByYear = (data.portfolio && data.portfolio.pnl_by_year) || {};
 
-    const p = data.portfolio;
-
-    // Show sections
+    // Show sections + period tabs
     document.getElementById('pnl-hero').style.display = '';
     document.getElementById('pnl-table-wrap').style.display = '';
     document.getElementById('pnl-chart-wrap').style.display = '';
+    document.getElementById('pnl-period-tabs').style.display = 'inline-flex';
 
-    // Portfolio P&L hero
-    document.getElementById('pnl-ytd-rev').textContent = fmt$(p.ytd_revenue);
+    // Activate default period
+    document.querySelectorAll('.pnl-period-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.period === currentPnlPeriod);
+    });
+
+    renderPnlForPeriod();
+    buildPnlChart(currentPnlMetric);
+}
+
+function renderPnlForPeriod() {
+    if (!pnlData) return;
+
+    // Aggregate each hotel, then roll up the portfolio
+    const perHotel = pnlData.map(h => ({hotel: h, agg: aggregateHotel(h)}));
+    const portfolio = perHotel.reduce((acc, x) => {
+        acc.revenue += x.agg.revenue;
+        acc.expenses += x.agg.expenses;
+        acc.noi += x.agg.noi;
+        acc.net_income += x.agg.net_income;
+        acc.months = Math.max(acc.months, x.agg.months);
+        return acc;
+    }, {revenue:0, expenses:0, noi:0, net_income:0, months:0});
+    portfolio.margin_pct = portfolio.revenue ? (portfolio.net_income / portfolio.revenue * 100) : 0;
+
+    // Subtitle — monthly span in the selected period
+    const allSelectedMonths = [...new Set(pnlData.flatMap(h =>
+        h.monthly.filter(periodMatch).map(m => m.year + '-' + String(m.month).padStart(2,'0'))
+    ))].sort();
+    const subtitle = allSelectedMonths.length === 0 ? 'No data' :
+        (allSelectedMonths.length === 1 ? allSelectedMonths[0] :
+         allSelectedMonths[0] + ' → ' + allSelectedMonths[allSelectedMonths.length - 1] +
+         '  (' + allSelectedMonths.length + ' months)');
+    document.getElementById('pnl-period-sub').textContent = subtitle;
+
+    // Hero cards — reset the red override each render so switching periods resets color
+    const label = periodLabel();
+    document.getElementById('pnl-rev-label').textContent = label + ' Revenue';
+    document.getElementById('pnl-net-label').textContent = label + ' Net Income';
+    document.getElementById('pnl-exp-label').textContent = label + ' Expenses';
+    document.getElementById('pnl-ytd-rev').textContent = fmt$(portfolio.revenue);
     const netEl = document.getElementById('pnl-ytd-net');
-    netEl.textContent = fmt$(p.ytd_net_income);
-    if (p.ytd_net_income < 0) netEl.style.cssText = 'background:linear-gradient(135deg,#ef476f,#ff6b8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:2.4rem;font-weight:700';
-    document.getElementById('pnl-ytd-margin').textContent = p.ytd_margin_pct + '% net margin';
-    document.getElementById('pnl-ytd-exp').textContent = fmt$(p.ytd_expenses);
+    netEl.textContent = fmt$(portfolio.net_income);
+    netEl.style.cssText = portfolio.net_income < 0
+        ? 'background:linear-gradient(135deg,#ef476f,#ff6b8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:2.4rem;font-weight:700'
+        : '';
+    document.getElementById('pnl-ytd-margin').textContent = portfolio.margin_pct.toFixed(1) + '% net margin';
+    document.getElementById('pnl-ytd-exp').textContent = fmt$(portfolio.expenses);
+    document.getElementById('pnl-noi-sub').textContent = 'NOI ' + fmt$(portfolio.noi);
 
-    // P&L table
+    // Highlights — Q1 2026 only, pulls the best / worst hotel automatically
+    const hl = document.getElementById('pnl-highlights');
+    if (currentPnlPeriod === 'y2026' && perHotel.length) {
+        const sorted = [...perHotel].sort((a,b) => b.agg.net_income - a.agg.net_income);
+        const best = sorted[0], worst = sorted[sorted.length - 1];
+        hl.style.display = '';
+        hl.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+                <div style="background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.3);border-radius:12px;padding:0.9rem 1.1rem">
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.5);margin-bottom:0.25rem">Top performer</div>
+                    <div style="font-weight:600;color:#00d4aa;font-size:0.95rem">${best.hotel.name}</div>
+                    <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);margin-top:0.15rem">
+                        Net ${fmt$(best.agg.net_income)} · ${best.agg.margin_pct.toFixed(1)}% margin · ${best.agg.avg_occ?best.agg.avg_occ.toFixed(1)+'% occ':''}
+                    </div>
+                </div>
+                <div style="background:rgba(239,71,111,0.08);border:1px solid rgba(239,71,111,0.3);border-radius:12px;padding:0.9rem 1.1rem">
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.5);margin-bottom:0.25rem">Needs attention</div>
+                    <div style="font-weight:600;color:#ef476f;font-size:0.95rem">${worst.hotel.name}</div>
+                    <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);margin-top:0.15rem">
+                        Net ${fmt$(worst.agg.net_income)} · ${worst.agg.margin_pct.toFixed(1)}% margin · ${worst.agg.avg_occ?worst.agg.avg_occ.toFixed(1)+'% occ':''}
+                    </div>
+                </div>
+            </div>`;
+    } else {
+        hl.style.display = 'none';
+    }
+
+    // Rebuild table
     const tbody = document.getElementById('pnl-table');
     tbody.innerHTML = '';
-    let totRev=0, totExp=0, totNoi=0, totNet=0;
-    pnlData.forEach(h => {
-        const y = h.ytd;
-        totRev += y.revenue; totExp += y.expenses; totNoi += y.noi; totNet += y.net_income;
-        const mc = y.margin_pct >= 5 ? 'td-good' : y.margin_pct >= 0 ? 'td-warn' : 'td-bad';
-        const nc = y.net_income >= 0 ? 'td-good' : 'td-bad';
+    perHotel.forEach(({hotel, agg}) => {
+        if (agg.months === 0) return;
+        const mc = agg.margin_pct >= 5 ? 'td-good' : agg.margin_pct >= 0 ? 'td-warn' : 'td-bad';
+        const nc = agg.net_income >= 0 ? 'td-good' : 'td-bad';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="td-hotel">${h.name}</td>
-            <td>${fmt$(y.revenue)}</td>
-            <td>${fmt$(y.expenses)}</td>
-            <td>${fmt$(y.noi)}</td>
-            <td class="${nc}">${fmt$(y.net_income)}</td>
-            <td class="${mc}">${y.margin_pct}%</td>
+            <td class="td-hotel">${hotel.name}</td>
+            <td>${agg.months}</td>
+            <td>${agg.avg_occ != null ? agg.avg_occ.toFixed(1)+'%' : '—'}</td>
+            <td>${agg.avg_adr != null ? fmtAdr(agg.avg_adr) : '—'}</td>
+            <td>${fmt$(agg.revenue)}</td>
+            <td>${fmt$(agg.expenses)}</td>
+            <td>${fmt$(agg.noi)}</td>
+            <td class="${nc}">${fmt$(agg.net_income)}</td>
+            <td class="${mc}">${agg.margin_pct.toFixed(1)}%</td>
         `;
         tbody.appendChild(tr);
     });
-    // Total row
-    const totMargin = totRev ? (totNet/totRev*100).toFixed(1) : '0.0';
-    const tr = document.createElement('tr');
-    tr.style.fontWeight = '700';
-    tr.style.borderTop = '2px solid rgba(0,212,170,0.3)';
-    tr.innerHTML = `
-        <td style="color:#00d4aa">PORTFOLIO</td>
-        <td>${fmt$(totRev)}</td>
-        <td>${fmt$(totExp)}</td>
-        <td>${fmt$(totNoi)}</td>
-        <td class="${totNet>=0?'td-good':'td-bad'}">${fmt$(totNet)}</td>
-        <td class="${totMargin>=5?'td-good':totMargin>=0?'td-warn':'td-bad'}">${totMargin}%</td>
-    `;
-    tbody.appendChild(tr);
+    if (portfolio.months > 0) {
+        const tr = document.createElement('tr');
+        tr.style.fontWeight = '700';
+        tr.style.borderTop = '2px solid rgba(0,212,170,0.3)';
+        tr.innerHTML = `
+            <td style="color:#00d4aa">PORTFOLIO</td>
+            <td>${portfolio.months}</td>
+            <td></td>
+            <td></td>
+            <td>${fmt$(portfolio.revenue)}</td>
+            <td>${fmt$(portfolio.expenses)}</td>
+            <td>${fmt$(portfolio.noi)}</td>
+            <td class="${portfolio.net_income>=0?'td-good':'td-bad'}">${fmt$(portfolio.net_income)}</td>
+            <td class="${portfolio.margin_pct>=5?'td-good':portfolio.margin_pct>=0?'td-warn':'td-bad'}">${portfolio.margin_pct.toFixed(1)}%</td>
+        `;
+        tbody.appendChild(tr);
+    }
+}
 
-    // Build initial chart
-    buildPnlChart('revenue');
+function switchPnlPeriod(btn) {
+    currentPnlPeriod = btn.dataset.period;
+    document.querySelectorAll('.pnl-period-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderPnlForPeriod();
+    buildPnlChart(currentPnlMetric);
 }
 
 function buildPnlChart(metric) {
@@ -712,14 +844,15 @@ function buildPnlChart(metric) {
     if (!pnlData) return;
 
     const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const inRange = m => periodMatch(m);
 
     if (metric === 'expenses') {
         // Stacked bar chart showing expense categories for one sample hotel or portfolio
         // Use all hotels summed by month
         const monthSet = new Set();
-        pnlData.forEach(h => h.monthly.forEach(m => monthSet.add(m.year + '-' + String(m.month).padStart(2,'0'))));
+        pnlData.forEach(h => h.monthly.filter(inRange).forEach(m => monthSet.add(m.year + '-' + String(m.month).padStart(2,'0'))));
         const months = [...monthSet].sort();
-        const labels = months.map(m => MONTHS[parseInt(m.split('-')[1])] + ' ' + m.split('-')[0].slice(2));
+        const labels = months.map(m => MONTHS[parseInt(m.split('-')[1])] + " '" + m.split('-')[0].slice(2));
 
         const cats = ['payroll_total','franchise_fees','marketing_total','utilities_total','property_expenses','insurance','mortgage_interest'];
         const catNames = ['Payroll','Franchise','Marketing','Utilities','Property','Insurance','Mortgage'];
@@ -760,9 +893,9 @@ function buildPnlChart(metric) {
 
     // Line/bar charts for revenue, net income, NOI
     const monthSet = new Set();
-    pnlData.forEach(h => h.monthly.forEach(m => monthSet.add(m.year + '-' + String(m.month).padStart(2,'0'))));
+    pnlData.forEach(h => h.monthly.filter(inRange).forEach(m => monthSet.add(m.year + '-' + String(m.month).padStart(2,'0'))));
     const months = [...monthSet].sort();
-    const labels = months.map(m => MONTHS[parseInt(m.split('-')[1])]);
+    const labels = months.map(m => MONTHS[parseInt(m.split('-')[1])] + " '" + m.split('-')[0].slice(2));
 
     const field = metric === 'revenue' ? 'total_revenue' : metric === 'net' ? 'net_income' : 'net_operating_income';
 
