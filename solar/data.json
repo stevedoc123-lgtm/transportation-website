@@ -1,20 +1,20 @@
 {
   "target_date": "2026-04-26",
-  "generated_at": "2026-04-25 17:40",
+  "generated_at": "2026-04-25 17:42",
   "status": "ok",
   "source": "supabase-sync",
   "prediction": {
-    "target_soc_pct": 90,
+    "target_soc_pct": 50,
     "current_soc_pct": 83.0,
     "current_kwh": 66.4,
-    "target_kwh": 72.0,
-    "predicted_solar_kwh": 55.1,
-    "predicted_load_kwh": 105.5,
-    "charge_needed_kwh": 20.6,
-    "overnight_drain_kwh": 82.8
+    "target_kwh": 40.0,
+    "predicted_solar_kwh": 46.9,
+    "predicted_load_kwh": 65,
+    "charge_needed_kwh": 0.0,
+    "overnight_drain_kwh": 62.5
   },
   "forecast": {
-    "cloud_cover_pct": 40,
-    "shortwave_radiation": 26.15
+    "cloud_cover_pct": 23,
+    "shortwave_radiation": 26.19
   }
 }
