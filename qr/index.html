@@ -64,7 +64,7 @@
             color: #555;
             margin-bottom: 1rem;
         }
-        .poster canvas { display: block; image-rendering: crisp-edges; }
+        .poster .qr-img { display: block; image-rendering: crisp-edges; width: 320px; height: 320px; }
         .poster .url { font-family: 'SF Mono', Menlo, monospace; font-size: 0.7rem; color: #888; margin-top: 0.85rem; word-break: break-all; }
         .poster .download {
             margin-top: 0.85rem;
@@ -78,59 +78,77 @@
         .poster .download:hover { background: #e94560; }
         .poster .footer { margin-top: 1rem; color: #aaa; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; }
 
-        /* ─── Print: one poster per letter page, full bleed ─── */
-        @page { size: letter; margin: 0.5in; }
+        /* ─── Print: one poster per letter page ─── */
+        @page { size: letter; margin: 0.6in; }
 
         @media print {
-            body { background: #fff; color: #000; padding: 0; }
-            header, .page-header, .help-box, .download { display: none !important; }
-            .container { max-width: none; padding: 0; margin: 0; }
+            html, body {
+                background: #fff !important;
+                color: #000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                min-height: auto !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            header, .page-header, .help-box, .download, .nav-right { display: none !important; }
+            .container { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+            #posters { display: block !important; }
 
             .poster {
-                width: 100%;
-                margin: 0;
-                padding: 0.5in 0.5in 0.5in;
-                background: #fff;
-                box-shadow: none;
-                border-radius: 0;
+                display: block !important;          /* avoid flex centering quirks in print */
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                text-align: center;
                 page-break-after: always;
+                break-after: page;
                 page-break-inside: avoid;
-                /* Use the full available page area */
-                min-height: 9.5in;
-                justify-content: center;
+                break-inside: avoid;
             }
-            .poster:last-child { page-break-after: auto; }
+            .poster:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
 
             .poster .show-name {
-                font-size: 28pt;
-                color: #555;
-                letter-spacing: 12px;
-                margin-bottom: 0.3in;
+                font-size: 24pt;
+                color: #555 !important;
+                letter-spacing: 10px;
+                margin: 0.4in 0 0.15in;
             }
             .poster .form-name {
-                font-size: 44pt;
-                color: #000;
-                letter-spacing: 4px;
-                margin-bottom: 0.3in;
+                font-size: 38pt;
+                color: #000 !important;
+                letter-spacing: 3px;
+                margin-bottom: 0.25in;
                 line-height: 1.1;
             }
             .poster .instructions {
-                font-size: 16pt;
-                color: #333;
-                margin-bottom: 0.4in;
+                font-size: 14pt;
+                color: #333 !important;
+                margin-bottom: 0.35in;
             }
-            .poster canvas {
-                width: 5.5in !important;
-                height: 5.5in !important;
+            /* Img prints reliably across browsers — canvases sometimes don't. */
+            .poster .qr-img {
+                width: 5in !important;
+                height: 5in !important;
+                display: inline-block !important;
+                margin: 0 auto !important;
             }
             .poster .url {
-                font-size: 10pt;
-                color: #666;
-                margin-top: 0.4in;
+                font-size: 9pt;
+                color: #666 !important;
+                margin-top: 0.3in;
+                word-break: break-all;
             }
             .poster .footer {
-                font-size: 10pt;
-                margin-top: 0.5in;
+                font-size: 9pt;
+                color: #888 !important;
+                margin-top: 0.4in;
                 letter-spacing: 4px;
             }
         }
@@ -143,7 +161,7 @@
         <nav>
             <a href="/" class="logo">Film Transpo</a>
             <div class="nav-right">
-                <button onclick="window.print()">Print All</button>
+                <button id="print-btn" onclick="window.print()" disabled>Loading…</button>
                 <a href="/">Home</a>
             </div>
         </nav>
@@ -196,7 +214,7 @@
         },
     ];
 
-    function renderPoster(code) {
+    async function renderPoster(code) {
         const poster = document.createElement('div');
         poster.className = 'poster';
 
@@ -215,21 +233,19 @@
         instrEl.textContent = code.instructions;
         poster.appendChild(instrEl);
 
-        // Render the QR at 1024px native resolution; CSS scales it down on screen
-        // and back up to 5.5in for print, keeping it crisp at print DPI.
-        const canvas = document.createElement('canvas');
-        canvas.style.width = '320px';
-        canvas.style.height = '320px';
-        poster.appendChild(canvas);
-
-        QRCode.toCanvas(canvas, code.url, {
-            width: 1024,
+        // Render QR to a data URL and embed as <img> — prints reliably across browsers.
+        const dataUrl = await QRCode.toDataURL(code.url, {
+            width: 1500,
             margin: 2,
             errorCorrectionLevel: 'M',
             color: { dark: '#000000', light: '#ffffff' },
-        }, (err) => {
-            if (err) console.error('QR error for', code.formName, err);
         });
+
+        const img = document.createElement('img');
+        img.className = 'qr-img';
+        img.src = dataUrl;
+        img.alt = `QR code for ${code.formName}`;
+        poster.appendChild(img);
 
         const urlEl = document.createElement('div');
         urlEl.className = 'url';
@@ -240,19 +256,10 @@
         dl.className = 'download';
         dl.textContent = 'Download PNG';
         dl.addEventListener('click', () => {
-            const big = document.createElement('canvas');
-            QRCode.toCanvas(big, code.url, {
-                width: 1500,
-                margin: 2,
-                errorCorrectionLevel: 'M',
-                color: { dark: '#000000', light: '#ffffff' },
-            }, (err) => {
-                if (err) { console.error(err); return; }
-                const link = document.createElement('a');
-                link.href = big.toDataURL('image/png');
-                link.download = code.file;
-                link.click();
-            });
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = code.file;
+            link.click();
         });
         poster.appendChild(dl);
 
@@ -264,7 +271,14 @@
         document.getElementById('posters').appendChild(poster);
     }
 
-    codes.forEach(renderPoster);
+    (async () => {
+        for (const code of codes) {
+            await renderPoster(code);
+        }
+        const btn = document.getElementById('print-btn');
+        btn.disabled = false;
+        btn.textContent = 'Print All';
+    })();
 </script>
 
 </body>
