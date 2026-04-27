@@ -182,7 +182,7 @@
     <div id="posters"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="/qr/qrcode-generator.min.js"></script>
 <script>
     // Use the deployed origin so codes scanned from any phone hit the live site,
     // even though this page might be opened locally.
@@ -214,25 +214,17 @@
         },
     ];
 
-    // Render a QR code to a data URL using the callback API (works on Safari,
-    // Chrome, Firefox — the Promise return path on toDataURL has been flaky on Safari).
+    // Synchronous — qrcode-generator builds the matrix in memory and returns
+    // a data URL directly. No CDN, no callbacks, no Promises to hang.
     function generateQRDataURL(url) {
-        return new Promise((resolve, reject) => {
-            const tmp = document.createElement('canvas');
-            QRCode.toCanvas(tmp, url, {
-                width: 1500,
-                margin: 2,
-                errorCorrectionLevel: 'M',
-                color: { dark: '#000000', light: '#ffffff' },
-            }, (err) => {
-                if (err) return reject(err);
-                try {
-                    resolve(tmp.toDataURL('image/png'));
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        });
+        if (typeof qrcode !== 'function') {
+            throw new Error('qrcode-generator library failed to load');
+        }
+        const qr = qrcode(0, 'M'); // type 0 = auto-size, error correction M (~15%)
+        qr.addData(url);
+        qr.make();
+        // cellSize 40 + margin 4 → ~1640px GIF, plenty for 5-inch print
+        return qr.createDataURL(40, 4);
     }
 
     function renderPoster(code, dataUrl) {
@@ -296,10 +288,10 @@
         document.getElementById('posters').appendChild(poster);
     }
 
-    (async () => {
+    (function init() {
         for (const code of codes) {
             try {
-                const dataUrl = await generateQRDataURL(code.url);
+                const dataUrl = generateQRDataURL(code.url);
                 renderPoster(code, dataUrl);
             } catch (err) {
                 console.error('QR render error for', code.formName, err);
@@ -310,16 +302,6 @@
         btn.disabled = false;
         btn.textContent = 'Print All';
     })();
-
-    // Belt-and-suspenders: never let the button stay stuck. After 8 seconds,
-    // re-enable it regardless so the user can still try to print.
-    setTimeout(() => {
-        const btn = document.getElementById('print-btn');
-        if (btn && btn.disabled) {
-            btn.disabled = false;
-            btn.textContent = 'Print All';
-        }
-    }, 8000);
 </script>
 
 </body>
