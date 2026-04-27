@@ -18,7 +18,7 @@
         .gate-box button { background: linear-gradient(135deg, #2563eb, #60a5fa); color: white; padding: 14px 40px; border: none; border-radius: 50px; font-weight: 700; text-transform: uppercase; cursor: pointer; width: 100%; font-size: 1rem; font-family: inherit; }
         .gate-box .err { color: #f87171; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1rem; }
 
-        .app { display: none; }
+        /* .app starts hidden via inline style so show() (which clears inline style) reveals it */
 
         header { padding: 1.5rem 0; border-bottom: 1px solid rgba(96,165,250,0.3); margin-bottom: 2rem; }
         nav { display: flex; justify-content: space-between; align-items: center; }
@@ -90,7 +90,7 @@
 </div>
 
 <!-- App -->
-<div class="app" id="app">
+<div class="app" id="app" style="display: none;">
     <header>
         <div class="container">
             <nav>
