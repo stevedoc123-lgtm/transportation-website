@@ -241,10 +241,13 @@ exports.handler = async (event) => {
     }
 
     try {
-        // Use Alpaca's IEX feed (free on paper) — pull 75 bars to compute 50d MA + 20d momentum
+        // Use Alpaca's IEX feed (free on paper). The bars endpoint needs an
+        // explicit `start` — `limit` alone only returns the latest bar.
+        // 120 calendar days ≈ ~85 trading days, plenty for 50d MA + 20d momentum.
         const symbols = UNIVERSE.join(',');
         const dataBaseUrl = 'https://data.alpaca.markets';
-        const url = `${dataBaseUrl}/v2/stocks/bars?symbols=${symbols}&timeframe=1Day&limit=75&adjustment=raw&feed=iex`;
+        const startDate = new Date(Date.now() - 120 * 86400000).toISOString().split('T')[0];
+        const url = `${dataBaseUrl}/v2/stocks/bars?symbols=${symbols}&timeframe=1Day&start=${startDate}&limit=10000&adjustment=raw&feed=iex`;
 
         const start = Date.now();
         const resp = await fetch(url, {
