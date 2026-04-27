@@ -181,18 +181,23 @@ function scoreBearish(a) {
 
 function scoreBullish(a) {
     // Reward uptrend (price > MA) but pulled back to a reasonable entry,
-    // plus oversold-bouncing RSI.
+    // plus neutral-to-slightly-bouncing RSI. Hard requirement: positive
+    // 20d momentum so we don't mistake a downtrend for a pullback.
+    if (a.mom20 == null || a.mom20 < 0) return 0;          // hard gate: no falling knives
+    if (a.distFromMaPct != null && a.distFromMaPct < -3) return 0; // and not below MA
+
     let s = 0;
     if (a.distFromMaPct != null && a.distFromMaPct >= -2 && a.distFromMaPct <= 8) {
-        s += 10 - Math.abs(a.distFromMaPct - 3); // peak around price ~3% above MA
+        s += 12 - Math.abs(a.distFromMaPct - 3);          // peak around price ~3% above MA
     }
-    if (a.rsi != null && a.rsi >= 35 && a.rsi <= 55) s += (55 - Math.abs(a.rsi - 45));
-    // Pullbacks within an uptrend: 5-15% off the 60d high is the sweet spot
-    if (a.distFromHighPct != null && a.distFromHighPct <= -5 && a.distFromHighPct >= -15) {
-        s += 8;
+    // RSI: prefer the bounce-friendly range. Reduced weight vs prior.
+    if (a.rsi != null && a.rsi >= 40 && a.rsi <= 58) s += (15 - Math.abs(a.rsi - 49));
+    // Pullbacks within an uptrend: 4-14% off the 60d high is the sweet spot
+    if (a.distFromHighPct != null && a.distFromHighPct <= -4 && a.distFromHighPct >= -14) {
+        s += 10;
     }
-    // Avoid clear downtrends
-    if (a.distFromMaPct != null && a.distFromMaPct < -5) s -= 20;
+    // Bonus for actually trending up over 20d
+    if (a.mom20 >= 2 && a.mom20 <= 12) s += 5;
     return s;
 }
 
