@@ -51,13 +51,20 @@ function ideaCardHtml(idea) {
 }
 
 exports.handler = async (event) => {
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Trigger-Token, X-Admin-Password' };
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: cors, body: '' };
+
     const trigger = event.headers['x-trigger-token'] || event.headers['X-Trigger-Token'];
-    const expected = process.env.SCREENER_TOKEN || process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!expected || trigger !== expected) {
-        return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'unauthorized' }) };
+    const adminPw = event.headers['x-admin-password'] || event.headers['X-Admin-Password'];
+    const expectedTrigger = process.env.SCREENER_TOKEN || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const expectedAdminPw = process.env.ADMIN_PASSWORD;
+    const okByTrigger = expectedTrigger && trigger === expectedTrigger;
+    const okByAdmin = expectedAdminPw && adminPw === expectedAdminPw;
+    if (!okByTrigger && !okByAdmin) {
+        return { statusCode: 401, headers: cors, body: JSON.stringify({ ok: false, error: 'unauthorized' }) };
     }
     if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+        return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
     }
 
     const RESEND_API_KEY = process.env.RESEND_API_KEY;

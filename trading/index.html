@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Admin | Film Transpo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #0f1729 60%, #16213e 100%); min-height: 100vh; color: #fff; padding-bottom: 4rem; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+        /* Password gate */
+        .gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .gate-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(96,165,250,0.3); border-radius: 20px; padding: 3rem; text-align: center; max-width: 400px; width: 100%; }
+        .gate-box h2 { font-size: 1.5rem; margin-bottom: 1rem; background: linear-gradient(135deg, #fff, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .gate-box input { width: 100%; padding: 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(96,165,250,0.3); border-radius: 10px; color: #fff; font-size: 1rem; text-align: center; margin-bottom: 1rem; font-family: inherit; }
+        .gate-box input:focus { outline: none; border-color: #60a5fa; }
+        .gate-box button { background: linear-gradient(135deg, #2563eb, #60a5fa); color: white; padding: 14px 40px; border: none; border-radius: 50px; font-weight: 700; text-transform: uppercase; cursor: pointer; width: 100%; font-size: 1rem; font-family: inherit; }
+        .gate-box .err { color: #f87171; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1rem; }
+
+        .app { display: none; }
+
+        header { padding: 1.5rem 0; border-bottom: 1px solid rgba(96,165,250,0.3); margin-bottom: 2rem; }
+        nav { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #60a5fa, #93c5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .nav-right { display: flex; gap: 1rem; align-items: center; }
+        .nav-right a, .nav-right button { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; background: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-family: inherit; }
+        .nav-right a:hover, .nav-right button:hover { color: #60a5fa; border-color: #60a5fa; }
+
+        h1 { font-size: 1.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.4rem; background: linear-gradient(135deg, #fff, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: rgba(255,255,255,0.55); font-size: 0.95rem; margin-bottom: 1.6rem; }
+
+        /* Account strip */
+        .account-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(96,165,250,0.15); border-radius: 12px; }
+        .stat { text-align: center; }
+        .stat .label { font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,0.5); letter-spacing: 1.5px; margin-bottom: 0.2rem; }
+        .stat .value { font-size: 1.15rem; font-weight: 700; color: #fff; }
+        .paper-badge { display: inline-block; background: rgba(245,158,11,0.18); color: #fbbf24; padding: 2px 9px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; }
+        .live-badge { display: inline-block; background: rgba(220,38,38,0.18); color: #f87171; padding: 2px 9px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; }
+
+        /* Action panel */
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+        @media (max-width: 720px) { .actions { grid-template-columns: 1fr; } }
+        .action-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(96,165,250,0.15); border-radius: 12px; padding: 1.25rem; }
+        .action-card h3 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 2px; color: #93c5fd; margin-bottom: 0.4rem; }
+        .action-card p { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-bottom: 0.9rem; line-height: 1.4; }
+        .btn { background: linear-gradient(135deg, #2563eb, #60a5fa); color: #fff; border: none; padding: 12px 22px; border-radius: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; font-size: 0.85rem; font-family: inherit; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(37,99,235,0.3); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 24px; right: 24px; background: #1f2937; border: 1px solid #374151; color: #fff; padding: 14px 20px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; transform: translateY(150%); transition: transform 0.3s; z-index: 1000; }
+        .toast.visible { transform: translateY(0); }
+        .toast.error { background: #7f1d1d; border-color: #b91c1c; }
+        .toast.success { background: #064e3b; border-color: #047857; }
+
+        /* Result viewer */
+        .result-block { background: #0f172a; border: 1px solid rgba(96,165,250,0.2); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; max-height: 350px; overflow: auto; }
+        .result-block pre { font-family: 'SF Mono', Menlo, monospace; font-size: 0.78rem; color: #cbd5e1; white-space: pre-wrap; word-break: break-word; }
+
+        /* Ideas list */
+        .ideas-section h2 { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.7); margin-bottom: 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .idea { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.7rem; }
+        .idea-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+        .symbol { font-size: 1.3rem; font-weight: 800; letter-spacing: 1px; }
+        .badge { font-size: 0.7rem; font-weight: 800; padding: 3px 9px; border-radius: 10px; letter-spacing: 1px; text-transform: uppercase; }
+        .badge.bearish { background: rgba(220,38,38,0.2); color: #f87171; border: 1px solid rgba(220,38,38,0.4); }
+        .badge.bullish { background: rgba(5,150,105,0.2); color: #34d399; border: 1px solid rgba(5,150,105,0.4); }
+        .badge.idea { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+        .badge.approved { background: rgba(5,150,105,0.2); color: #34d399; }
+        .badge.rejected { background: rgba(107,114,128,0.2); color: #9ca3af; }
+        .when { color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-left: auto; }
+        .idea-body { color: rgba(255,255,255,0.75); font-size: 0.9rem; line-height: 1.5; }
+        .idea-body .label { color: rgba(255,255,255,0.5); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem; display: block; }
+
+        .empty { text-align: center; padding: 2rem; color: rgba(255,255,255,0.4); font-style: italic; }
+    </style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+    <div class="gate-box">
+        <h2>Trading Admin</h2>
+        <p style="color:rgba(255,255,255,0.5);margin-bottom:1.5rem">Password required</p>
+        <input type="password" id="pw" placeholder="Password" autofocus onkeydown="if(event.key==='Enter')login()">
+        <button onclick="login()">Enter</button>
+        <div class="err" id="err"></div>
+    </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app">
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="logo">Film Transpo</a>
+                <div class="nav-right">
+                    <button onclick="logout()">Logout</button>
+                    <a href="/">Home</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Trading Admin</h1>
+        <p class="subtitle">Run the screener, send the brief, review pending ideas. <span id="env-badge"></span></p>
+
+        <div class="account-strip" id="account-strip"></div>
+
+        <div class="actions">
+            <div class="action-card">
+                <h3>1. Run Screener</h3>
+                <p>Pulls daily bars for the universe, scores bearish + bullish setups, writes top 6 to <code>trade_ideas</code>.</p>
+                <button class="btn" id="screener-btn" onclick="runScreener()">Run Screener</button>
+            </div>
+            <div class="action-card">
+                <h3>2. Send Brief Email</h3>
+                <p>Compiles the latest screener ideas and emails them to stevedoc123@gmail.com via Resend.</p>
+                <button class="btn" id="brief-btn" onclick="sendBrief()">Send Brief</button>
+            </div>
+        </div>
+
+        <div class="result-block" id="result-block" style="display:none">
+            <pre id="result"></pre>
+        </div>
+
+        <div class="ideas-section">
+            <h2>Recent Ideas (last 14 days)</h2>
+            <div id="ideas-list"></div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    const KEY = 'trading_admin_pw';
+
+    function show(el) { el.style.display = ''; }
+    function hide(el) { el.style.display = 'none'; }
+
+    function toast(msg, kind) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast visible ' + (kind || '');
+        setTimeout(() => t.classList.remove('visible'), 4000);
+    }
+
+    function getPw() { return sessionStorage.getItem(KEY) || ''; }
+    function setPw(v) { sessionStorage.setItem(KEY, v); }
+    function clearPw() { sessionStorage.removeItem(KEY); }
+
+    async function login() {
+        const pw = document.getElementById('pw').value.trim();
+        const err = document.getElementById('err');
+        err.textContent = '';
+        if (!pw) { err.textContent = 'Enter a password'; return; }
+
+        // Validate by hitting admin-data with this password
+        try {
+            const r = await fetch('/.netlify/functions/admin-data', {
+                headers: { 'X-Admin-Password': pw },
+            });
+            if (r.status === 401) { err.textContent = 'Wrong password'; return; }
+            if (!r.ok) { err.textContent = 'Server error: ' + r.status; return; }
+            setPw(pw);
+            hide(document.getElementById('gate'));
+            show(document.getElementById('app'));
+            const data = await r.json();
+            renderData(data);
+        } catch (e) {
+            err.textContent = 'Network error: ' + e.message;
+        }
+    }
+
+    function logout() {
+        clearPw();
+        location.reload();
+    }
+
+    async function refreshData() {
+        try {
+            const r = await fetch('/.netlify/functions/admin-data', {
+                headers: { 'X-Admin-Password': getPw() },
+            });
+            if (!r.ok) throw new Error('refresh failed: ' + r.status);
+            const data = await r.json();
+            renderData(data);
+        } catch (e) {
+            toast('Refresh failed: ' + e.message, 'error');
+        }
+    }
+
+    function renderData(data) {
+        // Account strip
+        const acct = data.account;
+        const strip = document.getElementById('account-strip');
+        const envBadge = document.getElementById('env-badge');
+        if (acct) {
+            envBadge.innerHTML = acct.paper
+                ? '<span class="paper-badge">Paper</span>'
+                : '<span class="live-badge">⚠ Live</span>';
+            strip.innerHTML = `
+                <div class="stat"><div class="label">Cash</div><div class="value">$${(+acct.cash).toLocaleString()}</div></div>
+                <div class="stat"><div class="label">Buying Power</div><div class="value">$${(+acct.buying_power).toLocaleString()}</div></div>
+                <div class="stat"><div class="label">Equity</div><div class="value">$${(+acct.equity).toLocaleString()}</div></div>
+                <div class="stat"><div class="label">Portfolio</div><div class="value">$${(+acct.portfolio_value).toLocaleString()}</div></div>
+                <div class="stat"><div class="label">Options Lvl</div><div class="value">${acct.options_trading_level}</div></div>
+            `;
+        } else {
+            strip.innerHTML = '<div class="stat"><div class="label">Account</div><div class="value">unavailable</div></div>';
+        }
+
+        // Ideas
+        const list = document.getElementById('ideas-list');
+        if (!data.ideas || !data.ideas.length) {
+            list.innerHTML = '<div class="empty">No ideas yet. Click "Run Screener" to generate some.</div>';
+            return;
+        }
+        list.innerHTML = data.ideas.map(idea => {
+            const bias = (idea.tags || []).includes('bearish') ? 'bearish'
+                       : (idea.tags || []).includes('bullish') ? 'bullish' : '';
+            const when = new Date(idea.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            return `
+                <div class="idea">
+                    <div class="idea-head">
+                        <span class="symbol">${idea.symbol}</span>
+                        ${bias ? `<span class="badge ${bias}">${bias}</span>` : ''}
+                        <span class="badge ${idea.status}">${idea.status}</span>
+                        <span class="when">${when}</span>
+                    </div>
+                    <div class="idea-body">
+                        <span class="label">Thesis</span>
+                        ${escapeHtml(idea.thesis || '—')}
+                        <span class="label">Invalidates</span>
+                        ${escapeHtml(idea.invalidation || '—')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function runScreener() {
+        const btn = document.getElementById('screener-btn');
+        const block = document.getElementById('result-block');
+        const result = document.getElementById('result');
+        btn.disabled = true; btn.textContent = 'Running...';
+        try {
+            const r = await fetch('/.netlify/functions/screener', {
+                method: 'POST',
+                headers: { 'X-Admin-Password': getPw() },
+            });
+            const data = await r.json();
+            show(block); result.textContent = JSON.stringify(data, null, 2);
+            if (data.ok) {
+                toast(`Screener ran: ${data.ideas_written} ideas written`, 'success');
+                await refreshData();
+            } else {
+                toast('Screener failed: ' + (data.error || 'see result'), 'error');
+            }
+        } catch (e) {
+            toast('Network error: ' + e.message, 'error');
+        }
+        btn.disabled = false; btn.textContent = 'Run Screener';
+    }
+
+    async function sendBrief() {
+        const btn = document.getElementById('brief-btn');
+        const block = document.getElementById('result-block');
+        const result = document.getElementById('result');
+        btn.disabled = true; btn.textContent = 'Sending...';
+        try {
+            const r = await fetch('/.netlify/functions/brief', {
+                method: 'POST',
+                headers: { 'X-Admin-Password': getPw() },
+            });
+            const data = await r.json();
+            show(block); result.textContent = JSON.stringify(data, null, 2);
+            if (data.ok && data.sent) {
+                toast(`Brief emailed: ${data.ideas_count} ideas`, 'success');
+                await refreshData();
+            } else if (data.ok && !data.sent) {
+                toast(`No fresh ideas to brief: ${data.reason}`, 'error');
+            } else {
+                toast('Brief failed: ' + (data.error || 'see result'), 'error');
+            }
+        } catch (e) {
+            toast('Network error: ' + e.message, 'error');
+        }
+        btn.disabled = false; btn.textContent = 'Send Brief';
+    }
+
+    // Auto-login if password is in sessionStorage
+    (async function autologin() {
+        const pw = getPw();
+        if (!pw) return;
+        try {
+            const r = await fetch('/.netlify/functions/admin-data', {
+                headers: { 'X-Admin-Password': pw },
+            });
+            if (!r.ok) { clearPw(); return; }
+            hide(document.getElementById('gate'));
+            show(document.getElementById('app'));
+            const data = await r.json();
+            renderData(data);
+        } catch {}
+    })();
+</script>
+
+</body>
+</html>

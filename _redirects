@@ -10,6 +10,8 @@
 /calendar/admin.html /calendar/admin.html 200!
 /qr /qr/index.html 200!
 /qr/ /qr/index.html 200!
+/trading /trading/index.html 200!
+/trading/ /trading/index.html 200!
 /shows/turpentine /shows/dogwood/ 301
 /shows/turpentine/ /shows/dogwood/ 301
 /shows/turpentine/* /shows/dogwood/:splat 301
