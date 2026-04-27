@@ -13,47 +13,12 @@
         nav { display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #e94560, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
         .nav-right { display: flex; gap: 1rem; align-items: center; }
-        .nav-right a, .nav-right button { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; background: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .nav-right a, .nav-right button { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500; background: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-family: inherit; }
         .nav-right a:hover, .nav-right button:hover { color: #e94560; border-color: #e94560; }
 
-        .page-header { text-align: center; margin-bottom: 2.5rem; }
+        .page-header { text-align: center; margin-bottom: 2rem; }
         .page-header h1 { font-size: 2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 0.5rem; background: linear-gradient(135deg, #fff, #e94560); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .page-header p { color: rgba(255,255,255,0.6); }
-
-        .show-section { margin-bottom: 3rem; }
-        .show-section h2 {
-            font-size: 1.4rem; font-weight: 800;
-            text-transform: uppercase; letter-spacing: 4px;
-            color: rgba(255,255,255,0.85);
-            margin-bottom: 1.2rem;
-            padding-bottom: 0.6rem;
-            border-bottom: 1px solid rgba(233,69,96,0.25);
-        }
-
-        .qr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
-        .qr-card {
-            background: #fff;
-            border-radius: 14px;
-            padding: 1.5rem 1.25rem 1.25rem;
-            color: #111;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-        .qr-card .label { font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.95rem; color: #1a1a2e; margin-bottom: 0.25rem; text-align: center; }
-        .qr-card .desc { color: #666; font-size: 0.8rem; margin-bottom: 1rem; text-align: center; line-height: 1.35; }
-        .qr-card canvas { display: block; image-rendering: crisp-edges; }
-        .qr-card .url { font-family: 'SF Mono', Menlo, monospace; font-size: 0.7rem; color: #888; margin-top: 0.85rem; word-break: break-all; text-align: center; line-height: 1.3; }
-        .qr-card .download {
-            margin-top: 0.75rem;
-            background: #1a1a2e; color: #fff;
-            border: none; padding: 6px 14px;
-            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
-            border-radius: 5px; cursor: pointer;
-            font-weight: 700;
-        }
-        .qr-card .download:hover { background: #e94560; }
 
         .help-box {
             background: rgba(233,69,96,0.08);
@@ -67,17 +32,107 @@
         }
         .help-box strong { color: #fff; }
 
-        /* Print layout — 2x2 cards per page, no nav, no decoration */
+        /* ─── Each QR poster: one per 8.5x11 page when printed ─── */
+        .poster {
+            background: #fff;
+            color: #111;
+            border-radius: 14px;
+            padding: 1.5rem 1.5rem 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center;
+        }
+        .poster .show-name {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        .poster .form-name {
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #1a1a2e;
+            text-transform: uppercase;
+            margin-bottom: 0.6rem;
+        }
+        .poster .instructions {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+        .poster canvas { display: block; image-rendering: crisp-edges; }
+        .poster .url { font-family: 'SF Mono', Menlo, monospace; font-size: 0.7rem; color: #888; margin-top: 0.85rem; word-break: break-all; }
+        .poster .download {
+            margin-top: 0.85rem;
+            background: #1a1a2e; color: #fff;
+            border: none; padding: 8px 18px;
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+            border-radius: 6px; cursor: pointer;
+            font-weight: 700;
+            font-family: inherit;
+        }
+        .poster .download:hover { background: #e94560; }
+        .poster .footer { margin-top: 1rem; color: #aaa; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* ─── Print: one poster per letter page, full bleed ─── */
+        @page { size: letter; margin: 0.5in; }
+
         @media print {
             body { background: #fff; color: #000; padding: 0; }
-            header, .page-header, .nav-right, .help-box, .download, .show-section h2 { display: none !important; }
+            header, .page-header, .help-box, .download { display: none !important; }
             .container { max-width: none; padding: 0; margin: 0; }
-            .show-section { margin: 0; padding: 0.5cm; page-break-inside: avoid; }
-            .qr-grid { grid-template-columns: 1fr 1fr; gap: 0.5cm; }
-            .qr-card { box-shadow: none; border: 1px dashed #888; padding: 0.4cm; page-break-inside: avoid; }
-            .qr-card .label { color: #000; font-size: 11pt; }
-            .qr-card .desc { color: #444; font-size: 8pt; }
-            .qr-card .url { color: #444; font-size: 7pt; }
+
+            .poster {
+                width: 100%;
+                margin: 0;
+                padding: 0.5in 0.5in 0.5in;
+                background: #fff;
+                box-shadow: none;
+                border-radius: 0;
+                page-break-after: always;
+                page-break-inside: avoid;
+                /* Use the full available page area */
+                min-height: 9.5in;
+                justify-content: center;
+            }
+            .poster:last-child { page-break-after: auto; }
+
+            .poster .show-name {
+                font-size: 28pt;
+                color: #555;
+                letter-spacing: 12px;
+                margin-bottom: 0.3in;
+            }
+            .poster .form-name {
+                font-size: 44pt;
+                color: #000;
+                letter-spacing: 4px;
+                margin-bottom: 0.3in;
+                line-height: 1.1;
+            }
+            .poster .instructions {
+                font-size: 16pt;
+                color: #333;
+                margin-bottom: 0.4in;
+            }
+            .poster canvas {
+                width: 5.5in !important;
+                height: 5.5in !important;
+            }
+            .poster .url {
+                font-size: 10pt;
+                color: #666;
+                margin-top: 0.4in;
+            }
+            .poster .footer {
+                font-size: 10pt;
+                margin-top: 0.5in;
+                letter-spacing: 4px;
+            }
         }
     </style>
 </head>
@@ -88,7 +143,7 @@
         <nav>
             <a href="/" class="logo">Film Transpo</a>
             <div class="nav-right">
-                <button onclick="window.print()">Print</button>
+                <button onclick="window.print()">Print All</button>
                 <a href="/">Home</a>
             </div>
         </nav>
@@ -97,103 +152,97 @@
 
 <div class="container">
     <div class="page-header">
-        <h1>QR Codes</h1>
-        <p>Print, post on set, scan from any phone camera</p>
+        <h1>QR Codes &mdash; Dogwood</h1>
+        <p>One per printable page. Click <strong>Print All</strong> for a 3-page packet, or <strong>Download PNG</strong> on any individual code.</p>
     </div>
 
     <div class="help-box">
-        <strong>Tips for printing:</strong> Click <strong>Print</strong> in the top right and the layout will rearrange to 2&times;2 cards per page (no header, no decoration).
-        Each QR also has a <strong>Download PNG</strong> button if you'd rather drop one into a slack message, doc, or print on its own.
-        Posters look best on letter paper or A4. Laminate the ones drivers will use daily.
+        <strong>Tips:</strong> Print on standard 8.5&times;11 letter paper. Each QR code prints on its own page.
+        Laminate the ones drivers will use daily. To print just one, use your browser's print dialog and pick the page number.
     </div>
 
-    <div class="show-section">
-        <h2>Dogwood</h2>
-        <div class="qr-grid" id="dogwood-grid"></div>
-    </div>
+    <div id="posters"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script>
     // Use the deployed origin so codes scanned from any phone hit the live site,
-    // even though this page is being viewed locally. On production this resolves
-    // to filmtranspo.com automatically.
+    // even though this page might be opened locally.
     const ORIGIN = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
         ? 'https://filmtranspo.com'
         : location.origin;
 
     const DOGWOOD_PRODUCTION_ID = 'adfa08d6-6aaf-46a3-b0ae-959c823748ab';
+    const SHOW_NAME = 'Dogwood';
 
     const codes = [
         {
-            grid: 'dogwood-grid',
-            label: 'Dogwood — Show Page',
-            desc: 'Tabbed page with both Run Request + Special Equipment forms.',
-            url: `${ORIGIN}/shows/dogwood/`,
-            file: 'dogwood-show-page.png',
-        },
-        {
-            grid: 'dogwood-grid',
-            label: 'Dogwood — Run Request',
-            desc: 'Opens directly to the Run Request form.',
+            formName: 'Run Requests',
+            instructions: 'Scan with your phone camera to submit a transportation run request.',
             url: `${ORIGIN}/shows/dogwood/#run`,
-            file: 'dogwood-run-request.png',
+            file: 'dogwood-run-request-qr.png',
         },
         {
-            grid: 'dogwood-grid',
-            label: 'Dogwood — Special Equipment',
-            desc: 'Opens directly to the Special Equipment Request form.',
+            formName: 'Special Equipment Requests',
+            instructions: 'Scan with your phone camera to request special equipment.',
             url: `${ORIGIN}/shows/dogwood/#equip`,
-            file: 'dogwood-equipment-request.png',
+            file: 'dogwood-special-equipment-qr.png',
         },
         {
-            grid: 'dogwood-grid',
-            label: 'Dogwood — Vehicle Check',
-            desc: 'Check OUT/IN/DOT for any unit. Production preselected.',
+            formName: 'Vehicle Check',
+            instructions: 'Scan with your phone camera to check a vehicle OUT, IN, or update DOT info.',
             url: `${ORIGIN}/vehicles/check.html?prod=${DOGWOOD_PRODUCTION_ID}`,
-            file: 'dogwood-vehicle-check.png',
+            file: 'dogwood-vehicle-check-qr.png',
         },
     ];
 
-    function renderCard(code) {
-        const card = document.createElement('div');
-        card.className = 'qr-card';
+    function renderPoster(code) {
+        const poster = document.createElement('div');
+        poster.className = 'poster';
 
-        const labelEl = document.createElement('div');
-        labelEl.className = 'label';
-        labelEl.textContent = code.label;
-        card.appendChild(labelEl);
+        const showEl = document.createElement('div');
+        showEl.className = 'show-name';
+        showEl.textContent = SHOW_NAME;
+        poster.appendChild(showEl);
 
-        const descEl = document.createElement('div');
-        descEl.className = 'desc';
-        descEl.textContent = code.desc;
-        card.appendChild(descEl);
+        const formEl = document.createElement('div');
+        formEl.className = 'form-name';
+        formEl.textContent = code.formName;
+        poster.appendChild(formEl);
 
+        const instrEl = document.createElement('div');
+        instrEl.className = 'instructions';
+        instrEl.textContent = code.instructions;
+        poster.appendChild(instrEl);
+
+        // Render the QR at 1024px native resolution; CSS scales it down on screen
+        // and back up to 5.5in for print, keeping it crisp at print DPI.
         const canvas = document.createElement('canvas');
-        card.appendChild(canvas);
+        canvas.style.width = '320px';
+        canvas.style.height = '320px';
+        poster.appendChild(canvas);
 
         QRCode.toCanvas(canvas, code.url, {
-            width: 280,
+            width: 1024,
             margin: 2,
             errorCorrectionLevel: 'M',
             color: { dark: '#000000', light: '#ffffff' },
         }, (err) => {
-            if (err) console.error('QR error for', code.label, err);
+            if (err) console.error('QR error for', code.formName, err);
         });
 
         const urlEl = document.createElement('div');
         urlEl.className = 'url';
         urlEl.textContent = code.url;
-        card.appendChild(urlEl);
+        poster.appendChild(urlEl);
 
         const dl = document.createElement('button');
         dl.className = 'download';
         dl.textContent = 'Download PNG';
         dl.addEventListener('click', () => {
-            // Render to a larger off-screen canvas for higher print quality
             const big = document.createElement('canvas');
             QRCode.toCanvas(big, code.url, {
-                width: 1024,
+                width: 1500,
                 margin: 2,
                 errorCorrectionLevel: 'M',
                 color: { dark: '#000000', light: '#ffffff' },
@@ -205,12 +254,17 @@
                 link.click();
             });
         });
-        card.appendChild(dl);
+        poster.appendChild(dl);
 
-        document.getElementById(code.grid).appendChild(card);
+        const footer = document.createElement('div');
+        footer.className = 'footer';
+        footer.textContent = 'Film Transpo';
+        poster.appendChild(footer);
+
+        document.getElementById('posters').appendChild(poster);
     }
 
-    codes.forEach(renderCard);
+    codes.forEach(renderPoster);
 </script>
 
 </body>
