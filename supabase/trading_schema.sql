@@ -70,3 +70,10 @@ create table if not exists research_briefs (
     summary text,
     idea_ids uuid[]                                -- references to trade_ideas surfaced in this brief
 );
+
+-- ── Lock down: enable RLS on all trading tables ──
+-- No policies = anon/authenticated keys have zero access.
+-- Server-side Netlify Functions will use SUPABASE_SERVICE_ROLE_KEY which bypasses RLS.
+alter table trade_ideas     enable row level security;
+alter table alpaca_api_log  enable row level security;
+alter table research_briefs enable row level security;
