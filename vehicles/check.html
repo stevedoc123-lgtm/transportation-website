@@ -56,6 +56,25 @@
         .damage-alert p { color: rgba(255,255,255,0.8); font-size: 0.95rem; margin-bottom: 0.3rem; }
         .damage-alert a { color: #ffc107; }
 
+        /* Prior photos comparison */
+        .prior-panel { background: rgba(96, 165, 250, 0.08); border: 2px solid rgba(96, 165, 250, 0.4); border-radius: 14px; padding: 1.25rem; margin-bottom: 2rem; display: none; }
+        .prior-panel.visible { display: block; }
+        .prior-panel h3 { color: #60a5fa; margin-bottom: 0.4rem; font-size: 1.05rem; }
+        .prior-panel .meta { color: rgba(255,255,255,0.65); font-size: 0.85rem; margin-bottom: 0.85rem; }
+        .prior-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 0.5rem; }
+        @media (max-width: 600px) { .prior-photo-grid { grid-template-columns: repeat(2, 1fr); } }
+        .prior-photo { position: relative; aspect-ratio: 1; background: rgba(0,0,0,0.4); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .prior-photo img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+        .prior-photo .pos-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.7rem; text-transform: uppercase; padding: 3px 6px; text-align: center; letter-spacing: 1px; }
+        .prior-photo.empty { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.25); font-size: 0.7rem; text-transform: uppercase; }
+        .prior-instructions { color: rgba(255,255,255,0.7); font-size: 0.85rem; line-height: 1.45; }
+        .prior-instructions strong { color: #fff; }
+
+        /* Lightbox */
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 2rem; cursor: zoom-out; }
+        .lightbox.visible { display: flex; }
+        .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
         /* Submit button */
         button[type="submit"] { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; padding: 18px 50px; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 700; text-transform: uppercase; cursor: pointer; width: 100%; transition: all 0.3s; margin-top: 2rem; }
         button[type="submit"]:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(233, 69, 96, 0.4); }
@@ -86,6 +105,17 @@
             <div class="damage-alert" id="damage-alert">
                 <h3>&#9888; Prior Damage on Record</h3>
                 <p id="damage-alert-text"></p>
+            </div>
+
+            <div class="prior-panel" id="prior-panel">
+                <h3>&#128247; Last Check-Out Photos &mdash; Compare Before You Submit</h3>
+                <div class="meta" id="prior-meta"></div>
+                <div class="prior-photo-grid" id="prior-photo-grid"></div>
+                <div class="prior-instructions">
+                    <strong>Walk around the vehicle.</strong> Tap any photo to enlarge.
+                    If anything is different from what you see now &mdash; new dent, scratch, missing trim, broken light &mdash;
+                    mark <strong>YES</strong> on damage below and document it with photos.
+                </div>
             </div>
 
             <form id="vehicle-check-form">
@@ -262,6 +292,10 @@
         </div>
     </div>
 
+    <div class="lightbox" id="lightbox" onclick="this.classList.remove('visible')">
+        <img id="lightbox-img" alt="Full-size photo">
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // ── Supabase Config ──
@@ -296,6 +330,13 @@
                         opt.textContent = p.name;
                         select.appendChild(opt);
                     });
+
+                    // Honor ?prod=<id> in URL — preselects the production (used by QR codes)
+                    const params = new URLSearchParams(window.location.search);
+                    const presetProd = params.get('prod');
+                    if (presetProd && productions.some(p => p.id === presetProd)) {
+                        select.value = presetProd;
+                    }
                 } else {
                     const opt = document.createElement('option');
                     opt.value = '';
@@ -319,13 +360,14 @@
                 btn.addEventListener('click', handlePhotoRemove);
             });
 
-            // Damage alert on check-IN: look up unit when type changes
+            // Damage alert + prior-photos comparison on check-IN
             document.querySelectorAll('[name="check_type"]').forEach(radio => {
-                radio.addEventListener('change', checkForPriorDamage);
+                radio.addEventListener('change', refreshPriorView);
             });
+            document.getElementById('production-select').addEventListener('change', refreshPriorView);
             document.getElementById('unit-number').addEventListener('input', () => {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(checkForPriorDamage, 500);
+                debounceTimer = setTimeout(refreshPriorView, 500);
             });
 
             // Form submit
@@ -345,12 +387,15 @@
         }
 
         // ── Photo handling ──
-        function handlePhotoSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        async function handlePhotoSelect(e) {
+            const original = e.target.files[0];
+            if (!original) return;
             const field = e.target.dataset.field;
             const container = e.target.closest('.photo-upload');
 
+            // Compress to ~1920px max edge, JPEG quality 0.85.
+            // Damage is still readable — drivers can tap to enlarge in the lightbox.
+            const file = await compressImage(original).catch(() => original);
             photoData[field] = file;
 
             // Show preview
@@ -369,6 +414,55 @@
             reader.readAsDataURL(file);
         }
 
+        // ── Client-side image compression ──
+        // Most phone photos arrive at 12MP (~3-5 MB). This downscales the longest edge
+        // to 1920px and re-encodes to JPEG @ 0.85 — typically ~300-500 KB while keeping
+        // damage like scratches, dings, and chipped trim clearly visible.
+        async function compressImage(file, maxDim = 1920, quality = 0.85) {
+            if (!file || !file.type.startsWith('image/')) return file;
+
+            const objectUrl = URL.createObjectURL(file);
+            try {
+                const img = await new Promise((resolve, reject) => {
+                    const i = new Image();
+                    i.onload = () => resolve(i);
+                    i.onerror = reject;
+                    i.src = objectUrl;
+                });
+
+                let { width, height } = img;
+                if (width <= maxDim && height <= maxDim) {
+                    // Already small enough — re-encode anyway to strip EXIF and normalize to JPEG
+                }
+                if (width > maxDim || height > maxDim) {
+                    if (width >= height) {
+                        height = Math.round(height * maxDim / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round(width * maxDim / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+                if (!blob) return file;
+                if (blob.size >= file.size) return file; // compression made it bigger — keep original
+
+                const newName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+                return new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() });
+            } catch (_err) {
+                return file;
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+            }
+        }
+
         function handlePhotoRemove(e) {
             e.stopPropagation();
             const container = e.target.closest('.photo-upload');
@@ -384,20 +478,37 @@
             container.classList.remove('has-photo');
         }
 
-        // ── Damage alert for check-ins ──
-        async function checkForPriorDamage() {
+        // ── Refresh prior damage alert + last check-out photo comparison on check-IN ──
+        async function refreshPriorView() {
             const checkType = document.querySelector('[name="check_type"]:checked');
             const unitNumber = document.getElementById('unit-number').value.trim();
             const productionId = document.getElementById('production-select').value;
             const alertEl = document.getElementById('damage-alert');
             const alertText = document.getElementById('damage-alert-text');
+            const priorPanel = document.getElementById('prior-panel');
 
+            // Only show the panels for an IN check with unit + production set
             if (!checkType || checkType.value !== 'IN' || !unitNumber || !productionId) {
                 alertEl.classList.remove('visible');
+                priorPanel.classList.remove('visible');
                 return;
             }
 
-            const { data: priorChecks } = await db
+            // Fetch the most recent prior check for this unit (any type) — used for the photo comparison
+            const { data: lastChecks } = await db
+                .from('vehicle_checks')
+                .select('*')
+                .eq('production_id', productionId)
+                .eq('unit_number', unitNumber)
+                .order('check_date', { ascending: false })
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            const last = lastChecks && lastChecks[0];
+            renderPriorPhotos(last);
+
+            // Damage history alert (only when prior damage on record)
+            const { data: priorDamage } = await db
                 .from('vehicle_checks')
                 .select('*')
                 .eq('production_id', productionId)
@@ -405,17 +516,56 @@
                 .eq('has_damage', true)
                 .order('check_date', { ascending: false });
 
-            if (priorChecks && priorChecks.length > 0) {
-                const latest = priorChecks[0];
-                const totalDamageRecords = priorChecks.length;
+            if (priorDamage && priorDamage.length > 0) {
+                const latest = priorDamage[0];
+                const totalDamageRecords = priorDamage.length;
                 const photoCount = [latest.damage_photo_1, latest.damage_photo_2, latest.damage_photo_3].filter(Boolean).length;
                 alertText.innerHTML = `<strong>${totalDamageRecords} prior damage record(s)</strong> for unit ${unitNumber}.<br>` +
                     `Most recent: ${latest.check_type} on ${latest.check_date} — "${latest.damage_comments || 'No details'}"<br>` +
-                    `${photoCount} damage photo(s) on file. <a href="/vehicles/?unit=${encodeURIComponent(unitNumber)}&prod=${productionId}">View full history →</a>`;
+                    `${photoCount} damage photo(s) on file. <a href="/vehicles/?unit=${encodeURIComponent(unitNumber)}&prod=${productionId}" target="_blank">View full history →</a>`;
                 alertEl.classList.add('visible');
             } else {
                 alertEl.classList.remove('visible');
             }
+        }
+
+        function renderPriorPhotos(last) {
+            const panel = document.getElementById('prior-panel');
+            const grid = document.getElementById('prior-photo-grid');
+            const meta = document.getElementById('prior-meta');
+
+            if (!last) {
+                panel.classList.remove('visible');
+                return;
+            }
+
+            const positions = [
+                ['Front', last.photo_front],
+                ['Left', last.photo_left],
+                ['Right', last.photo_right],
+                ['Rear', last.photo_rear],
+            ];
+
+            // Don't show the panel if there are zero reference photos to compare against
+            if (!positions.some(([, url]) => url)) {
+                panel.classList.remove('visible');
+                return;
+            }
+
+            const who = `${last.first_name || ''} ${last.last_name || ''}`.trim() || 'unknown driver';
+            meta.innerHTML = `Last check &mdash; <strong>${last.check_type}</strong> on ${last.check_date} by ${who} (${last.vendor || 'no vendor'}). Odometer: ${last.odometer || '—'}.`;
+
+            grid.innerHTML = positions.map(([label, url]) => {
+                if (!url) return `<div class="prior-photo empty">${label}<br>(no photo)</div>`;
+                return `<div class="prior-photo"><img src="${url}" alt="${label}" onclick="openLightbox('${url}')"><div class="pos-label">${label}</div></div>`;
+            }).join('');
+
+            panel.classList.add('visible');
+        }
+
+        function openLightbox(url) {
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('lightbox').classList.add('visible');
         }
 
         // ── Upload a photo to Supabase Storage ──
