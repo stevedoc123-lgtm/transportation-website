@@ -8,5 +8,10 @@
 /calendar/ /calendar/index.html 200!
 /calendar/admin /calendar/admin.html 200!
 /calendar/admin.html /calendar/admin.html 200!
+/qr /qr/index.html 200!
+/qr/ /qr/index.html 200!
+/shows/turpentine /shows/dogwood/ 301
+/shows/turpentine/ /shows/dogwood/ 301
+/shows/turpentine/* /shows/dogwood/:splat 301
 /solar/* /solar/index.html 200
 /* /index.html 200

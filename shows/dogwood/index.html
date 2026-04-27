@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turpentine — Transportation</title>
+    <title>Dogwood — Transportation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a1a 50%, #2a1a0a 100%);
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a0d10 50%, #2a1014 100%);
             min-height: 100vh;
             color: #fff;
             padding-bottom: 3rem;
@@ -181,7 +181,7 @@
 <div class="container">
     <div class="show-header">
         <div id="show-logo-wrap"></div>
-        <div class="show-name">Turpentine</div>
+        <div class="show-name">Dogwood</div>
         <div class="show-subtitle">A Thriller</div>
         <div class="show-dept">Transportation Department</div>
     </div>
@@ -196,7 +196,7 @@
         <div class="form-container">
             <div class="success-msg" id="run-success">Submitted! Your team has been notified.</div>
             <form id="run-form" onsubmit="return submitForm(event, 'run')">
-                <input type="hidden" name="show_slug" value="turpentine">
+                <input type="hidden" name="show_slug" value="dogwood">
                 <input type="hidden" name="form_type" value="run-request">
 
                 <h3 class="section-title">Requestor Information</h3>
@@ -318,7 +318,7 @@
         <div class="form-container">
             <div class="success-msg" id="equip-success">Submitted! Your team has been notified.</div>
             <form id="equip-form" onsubmit="return submitForm(event, 'equip')">
-                <input type="hidden" name="show_slug" value="turpentine">
+                <input type="hidden" name="show_slug" value="dogwood">
                 <input type="hidden" name="form_type" value="equipment-request">
 
                 <h3 class="section-title">Requestor Information</h3>
@@ -462,8 +462,8 @@ initAddressAutocomplete();
 
 const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzaGhxb3p4ZWFldHplbmVrenFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNzgwNTUsImV4cCI6MjA4OTk1NDA1NX0.qfyIW5ZAQeVbCSsZjfZ_6xdxklZW7Is-h_yuIYkB2ss';
-const SHOW_SLUG = 'turpentine';
-const SHOW_NAME = 'TURPENTINE';
+const SHOW_SLUG = 'dogwood';
+const SHOW_NAME = 'DOGWOOD';
 
 function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -471,11 +471,24 @@ function switchTab(tab) {
     if (tab === 'run') {
         document.querySelectorAll('.tab')[0].classList.add('active');
         document.getElementById('tab-run').classList.add('active');
+        if (history.replaceState) history.replaceState(null, '', '#run');
     } else {
         document.querySelectorAll('.tab')[1].classList.add('active');
         document.getElementById('tab-equip').classList.add('active');
+        if (history.replaceState) history.replaceState(null, '', '#equip');
     }
 }
+
+// Honor #run / #equip in URL on load (and on hash change) for QR-code deep links
+(function applyHashTab() {
+    const tabFromHash = () => location.hash === '#equip' ? 'equip' : (location.hash === '#run' ? 'run' : null);
+    const initial = tabFromHash();
+    if (initial) switchTab(initial);
+    window.addEventListener('hashchange', () => {
+        const t = tabFromHash();
+        if (t) switchTab(t);
+    });
+})();
 
 async function submitForm(e, type) {
     e.preventDefault();
