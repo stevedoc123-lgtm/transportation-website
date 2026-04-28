@@ -135,14 +135,19 @@
         <div class="account-strip" id="account-strip"></div>
 
         <div class="actions">
+            <div class="action-card" style="border:1px solid rgba(245,158,11,0.4); background: rgba(245,158,11,0.08)">
+                <h3 style="color:#fbbf24">⚡ Auto-Cycle</h3>
+                <p>Runs the screener, designs fillable spreads within the $125 cap, and <strong>fires orders directly</strong> at natural-fill price. Honors daily/concurrent caps. Bias 2 bearish : 1 bullish.</p>
+                <button class="btn" id="cycle-btn" onclick="runCycle()" style="background:linear-gradient(135deg,#d97706,#fbbf24)">Run Cycle (auto-fire)</button>
+            </div>
             <div class="action-card">
-                <h3>1. Run Screener</h3>
-                <p>Pulls daily bars for the universe, scores bearish + bullish setups, writes top 6 to <code>trade_ideas</code>.</p>
+                <h3>Manual: Screener Only</h3>
+                <p>Just generates ideas in the DB; no orders fire. Use if you want to review before letting the cycle run.</p>
                 <button class="btn" id="screener-btn" onclick="runScreener()">Run Screener</button>
             </div>
             <div class="action-card">
-                <h3>2. Send Brief Email</h3>
-                <p>Compiles the latest screener ideas and emails them to stevedoc123@gmail.com via Resend.</p>
+                <h3>Manual: Send Brief</h3>
+                <p>Compiles the latest screener ideas and emails them to your inbox via Resend.</p>
                 <button class="btn" id="brief-btn" onclick="sendBrief()">Send Brief</button>
             </div>
         </div>
@@ -449,6 +454,33 @@
 
     function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function runCycle() {
+        const btn = document.getElementById('cycle-btn');
+        const block = document.getElementById('result-block');
+        const result = document.getElementById('result');
+        btn.disabled = true; btn.textContent = 'Running...';
+        try {
+            const r = await fetch('/.netlify/functions/trade-cycle', {
+                method: 'POST',
+                headers: { 'X-Admin-Password': getPw(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ run_screener: true }),
+            });
+            const data = await r.json();
+            show(block); result.textContent = JSON.stringify(data, null, 2);
+            if (data.ok) {
+                const fired = data.fired_count || 0;
+                const skipped = data.skipped_count || 0;
+                toast(`Cycle done: ${fired} fired, ${skipped} skipped`, fired > 0 ? 'success' : 'error');
+                await refreshData();
+            } else {
+                toast('Cycle: ' + (data.error || 'failed'), 'error');
+            }
+        } catch (e) {
+            toast('Network error: ' + e.message, 'error');
+        }
+        btn.disabled = false; btn.textContent = 'Run Cycle (auto-fire)';
     }
 
     async function runScreener() {
