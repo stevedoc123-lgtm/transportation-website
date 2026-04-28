@@ -67,8 +67,33 @@
         .badge.bearish { background: rgba(220,38,38,0.2); color: #f87171; border: 1px solid rgba(220,38,38,0.4); }
         .badge.bullish { background: rgba(5,150,105,0.2); color: #34d399; border: 1px solid rgba(5,150,105,0.4); }
         .badge.idea { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+        .badge.pending_approval { background: rgba(245,158,11,0.2); color: #fbbf24; border:1px solid rgba(245,158,11,0.4); }
         .badge.approved { background: rgba(5,150,105,0.2); color: #34d399; }
+        .badge.paper_open { background: rgba(96,165,250,0.2); color: #93c5fd; border:1px solid rgba(96,165,250,0.4); }
+        .badge.paper_closed { background: rgba(167,139,250,0.2); color: #c4b5fd; }
         .badge.rejected { background: rgba(107,114,128,0.2); color: #9ca3af; }
+        .badge.expired { background: rgba(107,114,128,0.2); color: #9ca3af; }
+
+        /* Approval card actions */
+        .pending-actions { display:flex; gap:0.6rem; margin-top:0.8rem; }
+        .pending-actions button { flex:1; padding:10px 14px; border:none; border-radius:8px; font-weight:700; text-transform:uppercase; letter-spacing:1px; cursor:pointer; font-size:0.8rem; font-family:inherit; }
+        .pending-actions .approve { background: linear-gradient(135deg,#059669,#34d399); color:#fff; }
+        .pending-actions .reject { background: rgba(220,38,38,0.15); color:#f87171; border:1px solid rgba(220,38,38,0.4) !important; }
+        .pending-actions button:disabled { opacity:0.5; cursor:not-allowed; }
+        .legs-table { width:100%; margin-top:0.5rem; font-family:'SF Mono',Menlo,monospace; font-size:0.8rem; color:rgba(255,255,255,0.7); border-collapse:collapse; }
+        .legs-table td { padding:3px 8px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .legs-table .side-buy { color:#34d399; }
+        .legs-table .side-sell { color:#f87171; }
+        .econ-row { display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:0.6rem; font-size:0.8rem; color:rgba(255,255,255,0.7); }
+        .econ-row strong { color:#fff; }
+
+        /* Positions / orders */
+        .pos-row { display:flex; gap:0.6rem; align-items:center; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:6px; font-family:'SF Mono',Menlo,monospace; font-size:0.85rem; flex-wrap:wrap; }
+        .pos-row .sym { font-weight:700; color:#fff; min-width:200px; }
+        .pos-row .qty { color: rgba(255,255,255,0.6); min-width:60px; }
+        .pos-row .pnl-pos { color:#34d399; }
+        .pos-row .pnl-neg { color:#f87171; }
+        .pos-row .pnl-zero { color: rgba(255,255,255,0.5); }
         .when { color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-left: auto; }
         .idea-body { color: rgba(255,255,255,0.75); font-size: 0.9rem; line-height: 1.5; }
         .idea-body .label { color: rgba(255,255,255,0.5); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem; display: block; }
@@ -124,6 +149,21 @@
 
         <div class="result-block" id="result-block" style="display:none">
             <pre id="result"></pre>
+        </div>
+
+        <div class="ideas-section" id="pending-section" style="display:none">
+            <h2 style="color:#fbbf24">Pending Approval</h2>
+            <div id="pending-list"></div>
+        </div>
+
+        <div class="ideas-section" id="positions-section" style="display:none">
+            <h2 style="color:#34d399">Open Positions</h2>
+            <div id="positions-list"></div>
+        </div>
+
+        <div class="ideas-section" id="orders-section" style="display:none">
+            <h2 style="color:#60a5fa">Open Orders</h2>
+            <div id="orders-list"></div>
         </div>
 
         <div class="ideas-section">
@@ -213,13 +253,66 @@
             strip.innerHTML = '<div class="stat"><div class="label">Account</div><div class="value">unavailable</div></div>';
         }
 
-        // Ideas
+        // Pending Approval
+        const pending = (data.ideas || []).filter(i => i.status === 'pending_approval');
+        const pendingSection = document.getElementById('pending-section');
+        const pendingList = document.getElementById('pending-list');
+        if (pending.length) {
+            pendingSection.style.display = '';
+            pendingList.innerHTML = pending.map(idea => renderPendingCard(idea)).join('');
+        } else {
+            pendingSection.style.display = 'none';
+        }
+
+        // Open positions (live from Alpaca)
+        const posSection = document.getElementById('positions-section');
+        const posList = document.getElementById('positions-list');
+        if (data.positions && data.positions.length) {
+            posSection.style.display = '';
+            posList.innerHTML = data.positions.map(p => {
+                const pnl = parseFloat(p.unrealized_pl);
+                const pnlCls = pnl > 0 ? 'pnl-pos' : (pnl < 0 ? 'pnl-neg' : 'pnl-zero');
+                return `<div class="pos-row">
+                    <span class="sym">${p.symbol}</span>
+                    <span class="qty">qty ${p.qty}</span>
+                    <span class="qty">@ $${(+p.avg_entry_price).toFixed(2)}</span>
+                    <span class="qty">mkt $${(+p.market_value).toFixed(0)}</span>
+                    <span class="${pnlCls}" style="margin-left:auto">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} unrealized</span>
+                </div>`;
+            }).join('');
+        } else {
+            posSection.style.display = 'none';
+        }
+
+        // Open orders
+        const ordSection = document.getElementById('orders-section');
+        const ordList = document.getElementById('orders-list');
+        if (data.open_orders && data.open_orders.length) {
+            ordSection.style.display = '';
+            ordList.innerHTML = data.open_orders.map(o => {
+                const submitted = new Date(o.submitted_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+                const legsTxt = (o.legs || []).map(l => `${l.side} ${l.symbol}`).join(' / ') || `${o.side} ${o.qty} ${o.symbol}`;
+                return `<div class="pos-row">
+                    <span class="sym">${o.order_class === 'mleg' ? 'MULTI-LEG' : o.symbol}</span>
+                    <span class="qty">${o.status}</span>
+                    <span class="qty">@ $${o.limit_price || '-'} ${o.type}</span>
+                    <span class="qty" style="flex:1">${legsTxt}</span>
+                    <span class="qty">${submitted}</span>
+                    <button class="reject" style="border:1px solid rgba(220,38,38,0.4); background:rgba(220,38,38,0.15); color:#f87171; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.7rem; font-family:inherit;" onclick="cancelOrder('${o.id}')">Cancel</button>
+                </div>`;
+            }).join('');
+        } else {
+            ordSection.style.display = 'none';
+        }
+
+        // Recent ideas (excluding pending_approval — those have their own section)
         const list = document.getElementById('ideas-list');
-        if (!data.ideas || !data.ideas.length) {
+        const recent = (data.ideas || []).filter(i => i.status !== 'pending_approval');
+        if (!recent.length) {
             list.innerHTML = '<div class="empty">No ideas yet. Click "Run Screener" to generate some.</div>';
             return;
         }
-        list.innerHTML = data.ideas.map(idea => {
+        list.innerHTML = recent.map(idea => {
             const bias = (idea.tags || []).includes('bearish') ? 'bearish'
                        : (idea.tags || []).includes('bullish') ? 'bullish' : '';
             const when = new Date(idea.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -228,7 +321,7 @@
                     <div class="idea-head">
                         <span class="symbol">${idea.symbol}</span>
                         ${bias ? `<span class="badge ${bias}">${bias}</span>` : ''}
-                        <span class="badge ${idea.status}">${idea.status}</span>
+                        <span class="badge ${idea.status}">${idea.status.replace(/_/g, ' ')}</span>
                         <span class="when">${when}</span>
                     </div>
                     <div class="idea-body">
@@ -240,6 +333,118 @@
                 </div>
             `;
         }).join('');
+    }
+
+    function renderPendingCard(idea) {
+        const struct = idea.structure || {};
+        const legs = struct.legs || [];
+        const bias = (idea.tags || []).includes('bearish') ? 'bearish' : (idea.tags || []).includes('bullish') ? 'bullish' : '';
+        const when = new Date(idea.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        const legsHtml = legs.map(l => `
+            <tr>
+              <td class="side-${l.side}">${l.side.toUpperCase()}</td>
+              <td>${l.symbol}</td>
+              <td>×${l.ratio_qty || 1}</td>
+            </tr>`).join('');
+        const maxLoss = idea.planned_max_loss_usd != null ? `$${(+idea.planned_max_loss_usd).toFixed(0)}` : '?';
+        const maxGain = idea.planned_max_gain_usd != null ? `$${(+idea.planned_max_gain_usd).toFixed(0)}` : '?';
+        const limit = struct.limit_price != null ? `$${struct.limit_price}` : '?';
+        return `
+            <div class="idea" data-id="${idea.id}">
+                <div class="idea-head">
+                    <span class="symbol">${idea.symbol}</span>
+                    ${bias ? `<span class="badge ${bias}">${bias}</span>` : ''}
+                    <span class="badge pending_approval">pending approval</span>
+                    <span class="when">${when}</span>
+                </div>
+                <div class="idea-body">
+                    <span class="label">Strategy</span>
+                    ${idea.strategy.replace(/_/g, ' ')}
+                    <span class="label">Thesis</span>
+                    ${escapeHtml(idea.thesis || '—')}
+                    <span class="label">Invalidates</span>
+                    ${escapeHtml(idea.invalidation || '—')}
+                    <table class="legs-table">${legsHtml}</table>
+                    <div class="econ-row">
+                      <span>Limit: <strong>${limit}</strong></span>
+                      <span>Max loss: <strong style="color:#f87171">${maxLoss}</strong></span>
+                      <span>Max gain: <strong style="color:#34d399">${maxGain}</strong></span>
+                      ${idea.notes ? `<span>${escapeHtml(idea.notes)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="pending-actions">
+                    <button class="reject" onclick="rejectIdea('${idea.id}')">Reject</button>
+                    <button class="approve" onclick="approveIdea('${idea.id}', this)">Approve &amp; Submit</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function approveIdea(id, btnEl) {
+        const card = btnEl.closest('.idea');
+        card.querySelectorAll('button').forEach(b => b.disabled = true);
+        btnEl.textContent = 'Submitting...';
+        try {
+            const r = await fetch('/.netlify/functions/approve-idea', {
+                method: 'POST',
+                headers: { 'X-Admin-Password': getPw(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }),
+            });
+            const data = await r.json();
+            if (data.ok) {
+                toast(`Order submitted: ${data.order_id?.slice(0,8)}…`, 'success');
+                await refreshData();
+            } else {
+                toast('Approve failed: ' + (data.error || 'see console'), 'error');
+                console.error(data);
+                card.querySelectorAll('button').forEach(b => b.disabled = false);
+                btnEl.textContent = 'Approve & Submit';
+            }
+        } catch (e) {
+            toast('Network error: ' + e.message, 'error');
+            card.querySelectorAll('button').forEach(b => b.disabled = false);
+            btnEl.textContent = 'Approve & Submit';
+        }
+    }
+
+    async function rejectIdea(id) {
+        if (!confirm('Reject this trade idea?')) return;
+        try {
+            const r = await fetch('/.netlify/functions/reject-idea', {
+                method: 'POST',
+                headers: { 'X-Admin-Password': getPw(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }),
+            });
+            const data = await r.json();
+            if (data.ok) {
+                toast('Idea rejected', 'success');
+                await refreshData();
+            } else {
+                toast('Reject failed: ' + (data.error || ''), 'error');
+            }
+        } catch (e) {
+            toast('Network error: ' + e.message, 'error');
+        }
+    }
+
+    async function cancelOrder(orderId) {
+        if (!confirm('Cancel this open order?')) return;
+        try {
+            const r = await fetch('/.netlify/functions/cancel-order', {
+                method: 'POST',
+                headers: { 'X-Admin-Password': getPw(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: orderId }),
+            });
+            const data = await r.json();
+            if (data.ok) {
+                toast('Order canceled', 'success');
+                await refreshData();
+            } else {
+                toast('Cancel failed: ' + (data.error || ''), 'error');
+            }
+        } catch (e) {
+            toast('Network error: ' + e.message, 'error');
+        }
     }
 
     function escapeHtml(s) {

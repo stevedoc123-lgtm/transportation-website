@@ -40,17 +40,16 @@ exports.handler = async (event) => {
 
     try {
         const cutoff = new Date(Date.now() - 14 * 86400000).toISOString();
+        const alpacaHeaders = {
+            'APCA-API-KEY-ID': process.env.ALPACA_KEY_ID,
+            'APCA-API-SECRET-KEY': process.env.ALPACA_SECRET_KEY,
+        };
 
-        const [ideas, briefs, account] = await Promise.all([
+        const [ideas, briefs, account, positions, openOrders] = await Promise.all([
             sb(`trade_ideas?created_at=gte.${cutoff}&order=created_at.desc&select=*&limit=50`),
             sb(`research_briefs?order=created_at.desc&select=*&limit=10`),
             (async () => {
-                const r = await fetch(`${process.env.ALPACA_BASE_URL}/v2/account`, {
-                    headers: {
-                        'APCA-API-KEY-ID': process.env.ALPACA_KEY_ID,
-                        'APCA-API-SECRET-KEY': process.env.ALPACA_SECRET_KEY,
-                    },
-                });
+                const r = await fetch(`${process.env.ALPACA_BASE_URL}/v2/account`, { headers: alpacaHeaders });
                 if (!r.ok) return null;
                 const a = await r.json();
                 return {
@@ -59,12 +58,22 @@ exports.handler = async (event) => {
                     paper: process.env.ALPACA_BASE_URL?.includes('paper'),
                 };
             })(),
+            (async () => {
+                const r = await fetch(`${process.env.ALPACA_BASE_URL}/v2/positions`, { headers: alpacaHeaders });
+                if (!r.ok) return [];
+                return r.json();
+            })(),
+            (async () => {
+                const r = await fetch(`${process.env.ALPACA_BASE_URL}/v2/orders?status=open&limit=50&nested=true`, { headers: alpacaHeaders });
+                if (!r.ok) return [];
+                return r.json();
+            })(),
         ]);
 
         return {
             statusCode: 200,
             headers: { ...cors, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ok: true, ideas, briefs, account }, null, 2),
+            body: JSON.stringify({ ok: true, ideas, briefs, account, positions, open_orders: openOrders }, null, 2),
         };
     } catch (err) {
         return { statusCode: 500, headers: cors, body: JSON.stringify({ ok: false, error: err.message }) };
