@@ -35,5 +35,20 @@ exports.handler = async (event) => {
         return { statusCode: 502, headers: cors, body: JSON.stringify({ ok: false, error: `Alpaca ${r.status}: ${txt}` }) };
     }
 
+    // Sync the trade_ideas row so the daily-count and pending-list don't drift.
+    // (Best-effort; cancel still succeeds even if this fails.)
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        await fetch(`https://dshhqozxeaetzenekzqr.supabase.co/rest/v1/trade_ideas?alpaca_order_id=eq.${req.id}&status=eq.paper_open`, {
+            method: 'PATCH',
+            headers: {
+                apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+                Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+            },
+            body: JSON.stringify({ status: 'rejected', rejected_reason: 'order canceled before fill' }),
+        }).catch(() => {});
+    }
+
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, request_id: r.headers.get('x-request-id') }) };
 };

@@ -302,10 +302,15 @@ exports.handler = async (event) => {
             return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(summary, null, 2) };
         }
 
-        // 3. Count today's new trades (don't exceed daily cap)
+        // 3. Count today's actually-filled new trades (canceled don't count).
+        // Source of truth is Alpaca, not the DB — DB rows can drift from real order state.
         const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
-        const todayCountResp = await fetch(`${SUPABASE_URL}/rest/v1/trade_ideas?created_at=gte.${todayStart.toISOString()}&status=in.(approved,paper_open,paper_closed)&select=id`, { headers: sbHeaders() });
-        const todayCount = (await todayCountResp.json()).length;
+        const ordersUrl = `${TRADING_BASE}/v2/orders?after=${encodeURIComponent(todayStart.toISOString())}&status=all&limit=100&nested=true`;
+        const ordersResp = await fetch(ordersUrl, { headers: alpacaHeaders() });
+        const ordersToday = ordersResp.ok ? await ordersResp.json() : [];
+        const todayCount = ordersToday.filter(o =>
+            ['filled', 'partially_filled'].includes(o.status) && o.order_class === 'mleg'
+        ).length;
         const remainingDaily = Math.max(0, MAX_NEW_TRADES_PER_DAY - todayCount);
         if (remainingDaily === 0) {
             summary.ok = false;
