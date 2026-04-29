@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 /**
- * One-shot IV history backfill.
+ * One-shot IV history backfill — PARKED.
+ *
+ * REQUIRES ALPACA ALGO TRADER PLUS SUBSCRIPTION (~$99/mo) FOR OPRA ACCESS.
+ * The Basic (free) plan returns 403 "OPRA agreement is not signed" on
+ * /v1beta1/options/bars. The screener's daily collector works fine on the
+ * free indicative feed (snapshots), so we collect IV history forward and
+ * compute IV rank once enough days accumulate (~30 days for rough
+ * percentile, ~252 for true 52w rank). This script is kept in case the
+ * subscription is ever upgraded.
  *
  * For each symbol in UNIVERSE, walks the past ~252 trading days, picks the
  * ATM straddle (~30 DTE next monthly expiry) for each day, fetches its
@@ -8,7 +16,7 @@
  * upserts one iv_history row per (symbol, date).
  *
  * Run from the repo root:
- *   netlify env:exec node scripts/iv-backfill.js
+ *   netlify dev:exec node scripts/iv-backfill.js
  *
  * Reads env: ALPACA_KEY_ID, ALPACA_SECRET_KEY, ALPACA_BASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
@@ -93,11 +101,29 @@ const alpacaHeaders = () => ({
     'Accept': 'application/json',
 });
 
-async function alpacaJson(url) {
+const DEBUG = process.env.DEBUG === '1';
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Throttle: Alpaca paper allows 200 req/min. Spread at ~3/sec with auto-retry on 429.
+const MIN_INTERVAL_MS = 350;
+let _lastCallAt = 0;
+
+async function alpacaJson(url, attempt = 0) {
+    const now = Date.now();
+    const wait = Math.max(0, _lastCallAt + MIN_INTERVAL_MS - now);
+    if (wait > 0) await sleep(wait);
+    _lastCallAt = Date.now();
+
     const r = await fetch(url, { headers: alpacaHeaders() });
+    if (r.status === 429 && attempt < 5) {
+        const backoff = 2000 * (attempt + 1);
+        if (DEBUG) console.log(`    [429] backing off ${backoff}ms then retry`);
+        await sleep(backoff);
+        return alpacaJson(url, attempt + 1);
+    }
     if (!r.ok) {
         const t = await r.text();
-        throw new Error(`${r.status} ${url.slice(0, 100)}: ${t.slice(0, 200)}`);
+        throw new Error(`${r.status} ${url.slice(0, 120)}: ${t.slice(0, 200)}`);
     }
     return r.json();
 }
@@ -108,14 +134,14 @@ async function getStockBars(symbol, startDate, endDate) {
     return (j.bars?.[symbol] || []).map(b => ({ date: b.t.slice(0, 10), close: b.c }));
 }
 
-async function listContracts(symbol, side, expirationGte, expirationLte) {
+async function listContractsForStatus(symbol, side, status, expirationGte, expirationLte) {
     const all = [];
     let pageToken = null;
     for (let i = 0; i < 20; i++) {
         const params = new URLSearchParams({
             underlying_symbols: symbol,
             type: side,
-            status: 'active',                          // active includes still-listed ones
+            status,
             expiration_date_gte: expirationGte,
             expiration_date_lte: expirationLte,
             limit: '1000',
@@ -126,51 +152,56 @@ async function listContracts(symbol, side, expirationGte, expirationLte) {
         pageToken = j.next_page_token;
         if (!pageToken) break;
     }
-    // Try expired status too — Alpaca splits active/expired
-    pageToken = null;
-    for (let i = 0; i < 20; i++) {
-        const params = new URLSearchParams({
-            underlying_symbols: symbol,
-            type: side,
-            status: 'inactive',
-            expiration_date_gte: expirationGte,
-            expiration_date_lte: expirationLte,
-            limit: '1000',
-        });
-        if (pageToken) params.set('page_token', pageToken);
-        const j = await alpacaJson(`${TRADING_BASE}/v2/options/contracts?${params}`).catch(() => ({ option_contracts: [] }));
-        if (j.option_contracts) all.push(...j.option_contracts);
-        pageToken = j.next_page_token;
-        if (!pageToken) break;
-    }
     return all;
 }
 
+async function listContracts(symbol, side, expirationGte, expirationLte) {
+    const [active, inactive] = [
+        await listContractsForStatus(symbol, side, 'active', expirationGte, expirationLte),
+        await listContractsForStatus(symbol, side, 'inactive', expirationGte, expirationLte),
+    ];
+    if (DEBUG) console.log(`    listContracts ${symbol} ${side}: ${active.length} active + ${inactive.length} inactive = ${active.length + inactive.length}`);
+    return [...active, ...inactive];
+}
+
 async function getOptionBars(contractSymbols, startDate, endDate) {
-    // /v1beta1/options/bars — multi-symbol comma-separated, paginated by page_token
+    // Multi-symbol queries hit OPRA gating (403). Single-symbol works on the free
+    // indicative tier. So we fetch one contract at a time — slower but no paid plan.
     const out = {};
-    for (let i = 0; i < contractSymbols.length; i += 50) {
-        const chunk = contractSymbols.slice(i, i + 50);
+    let i = 0;
+    let withBars = 0;
+    let empty = 0;
+    let failed = 0;
+    for (const sym of contractSymbols) {
+        i++;
         let pageToken = null;
-        for (let p = 0; p < 20; p++) {
-            const params = new URLSearchParams({
-                symbols: chunk.join(','),
-                timeframe: '1Day',
-                start: startDate,
-                end: endDate,
-                limit: '10000',
-            });
-            if (pageToken) params.set('page_token', pageToken);
-            const j = await alpacaJson(`${DATA_BASE}/v1beta1/options/bars?${params}`).catch(() => ({ bars: {} }));
-            if (j.bars) {
-                for (const [sym, bars] of Object.entries(j.bars)) {
-                    (out[sym] = out[sym] || []).push(...bars);
-                }
+        let bars = [];
+        try {
+            for (let p = 0; p < 5; p++) {
+                const params = new URLSearchParams({
+                    symbols: sym,
+                    timeframe: '1Day',
+                    start: startDate,
+                    end: endDate,
+                    limit: '10000',
+                });
+                if (pageToken) params.set('page_token', pageToken);
+                const j = await alpacaJson(`${DATA_BASE}/v1beta1/options/bars?${params}`);
+                if (j.bars && j.bars[sym]) bars.push(...j.bars[sym]);
+                pageToken = j.next_page_token;
+                if (!pageToken) break;
             }
-            pageToken = j.next_page_token;
-            if (!pageToken) break;
+        } catch (e) {
+            failed++;
+            if (DEBUG) console.log(`    bars ${sym} failed: ${e.message.slice(0, 100)}`);
+            continue;
+        }
+        if (bars.length > 0) { out[sym] = bars; withBars++; } else { empty++; }
+        if (DEBUG && i % 25 === 0) {
+            console.log(`    bars progress: ${i}/${contractSymbols.length}, withBars=${withBars}, empty=${empty}, failed=${failed}`);
         }
     }
+    if (DEBUG) console.log(`    bars done: ${withBars} with data, ${empty} empty, ${failed} errored`);
     return out;
 }
 
