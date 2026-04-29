@@ -385,10 +385,29 @@ exports.handler = async (event) => {
             today_count_after: todayCount + summary.fired.length,
             open_positions_after: positions.length + summary.fired.length,
         };
+        summary.completed_at = new Date().toISOString();
+
+        // Heartbeat (best-effort, don't block the response on it)
+        sbInsert('automation_runs', {
+            name: 'trade-cycle',
+            source: isScheduled ? 'netlify-scheduled' : 'manual',
+            status: summary.errors?.length ? 'errored' : 'ok',
+            started_at: summary.started_at,
+            completed_at: summary.completed_at,
+            summary,
+        }, 'return=minimal').catch(() => {});
 
         return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(summary, null, 2) };
     } catch (err) {
         console.error('trade-cycle error', err);
+        sbInsert('automation_runs', {
+            name: 'trade-cycle',
+            source: isScheduled ? 'netlify-scheduled' : 'manual',
+            status: 'errored',
+            started_at: summary.started_at,
+            completed_at: new Date().toISOString(),
+            summary: { ok: false, error: err.message },
+        }, 'return=minimal').catch(() => {});
         return { statusCode: 500, headers: cors, body: JSON.stringify({ ok: false, error: err.message, stack: err.stack?.slice(0, 500) }) };
     }
 };

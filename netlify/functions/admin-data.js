@@ -45,7 +45,7 @@ exports.handler = async (event) => {
             'APCA-API-SECRET-KEY': process.env.ALPACA_SECRET_KEY,
         };
 
-        const [ideas, briefs, account, positions, openOrders] = await Promise.all([
+        const [ideas, briefs, account, positions, openOrders, automationRuns] = await Promise.all([
             sb(`trade_ideas?created_at=gte.${cutoff}&order=created_at.desc&select=*&limit=50`),
             sb(`research_briefs?order=created_at.desc&select=*&limit=10`),
             (async () => {
@@ -68,12 +68,13 @@ exports.handler = async (event) => {
                 if (!r.ok) return [];
                 return r.json();
             })(),
+            sb(`automation_runs?order=completed_at.desc&select=name,source,status,started_at,completed_at&limit=10`).catch(() => []),
         ]);
 
         return {
             statusCode: 200,
             headers: { ...cors, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ok: true, ideas, briefs, account, positions, open_orders: openOrders }, null, 2),
+            body: JSON.stringify({ ok: true, ideas, briefs, account, positions, open_orders: openOrders, automation_runs: automationRuns }, null, 2),
         };
     } catch (err) {
         return { statusCode: 500, headers: cors, body: JSON.stringify({ ok: false, error: err.message }) };

@@ -134,6 +134,8 @@
 
         <div class="account-strip" id="account-strip"></div>
 
+        <div id="automation-strip" style="margin: 0.75rem 0; font-size: 0.85rem; color: rgba(255,255,255,0.7);"></div>
+
         <div class="actions">
             <div class="action-card" style="border:1px solid rgba(245,158,11,0.4); background: rgba(245,158,11,0.08)">
                 <h3 style="color:#fbbf24">⚡ Auto-Cycle</h3>
@@ -256,6 +258,36 @@
             `;
         } else {
             strip.innerHTML = '<div class="stat"><div class="label">Account</div><div class="value">unavailable</div></div>';
+        }
+
+        // Automation heartbeat strip — most recent run per job name
+        const autoStrip = document.getElementById('automation-strip');
+        const runs = data.automation_runs || [];
+        if (runs.length) {
+            const byJob = {};
+            for (const r of runs) {
+                if (!byJob[r.name]) byJob[r.name] = r;
+            }
+            const fmtAgo = (iso) => {
+                if (!iso) return '?';
+                const ago = Date.now() - new Date(iso).getTime();
+                const min = Math.round(ago / 60000);
+                if (min < 1) return 'just now';
+                if (min < 60) return `${min}m ago`;
+                const hr = Math.round(min / 60);
+                if (hr < 24) return `${hr}h ago`;
+                return `${Math.round(hr / 24)}d ago`;
+            };
+            const parts = Object.values(byJob).map(r => {
+                const ok = r.status === 'ok';
+                const dot = ok ? '🟢' : '🔴';
+                const stale = (Date.now() - new Date(r.completed_at).getTime()) > 90 * 60 * 1000; // 90 min
+                const staleNote = stale && r.source !== 'netlify-scheduled' ? ' <span style="color:#fbbf24">[stale]</span>' : '';
+                return `${dot} <strong>${r.name}</strong> · ${fmtAgo(r.completed_at)} · ${r.source}${staleNote}`;
+            });
+            autoStrip.innerHTML = parts.join(' · ');
+        } else {
+            autoStrip.innerHTML = '<span style="color:rgba(255,255,255,0.4)">no automation runs yet</span>';
         }
 
         // Pending Approval
