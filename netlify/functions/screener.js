@@ -202,6 +202,57 @@ async function findAtmStraddle(symbol, spot) {
     return { callPick, putPick };
 }
 
+// ── VIX market-wide regime overlay ─────────────────────────────────────────
+// Free source: CBOE's official VIX_History.csv (no auth, no rate limit).
+
+async function fetchVixHistory() {
+    const url = 'https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv';
+    const r = await fetch(url, { headers: { 'Accept': 'text/csv' } });
+    if (!r.ok) throw new Error(`VIX fetch ${r.status}`);
+    const text = await r.text();
+    const lines = text.split('\n').slice(1).filter(l => l.trim());
+    const rows = [];
+    for (const l of lines) {
+        const cols = l.split(',');
+        if (cols.length < 5) continue;
+        const close = parseFloat(cols[4]);
+        if (!Number.isFinite(close)) continue;
+        // CBOE date format is M/D/YYYY — normalize to YYYY-MM-DD
+        const [m, d, y] = cols[0].split('/');
+        if (!y) continue;
+        const date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        rows.push({ date, close });
+    }
+    rows.sort((a, b) => a.date.localeCompare(b.date));
+    return rows;
+}
+
+function computeVixRegime(history, lookback = 252) {
+    if (!history || history.length < 30) return null;
+    const slice = history.slice(-lookback);
+    const closes = slice.map(r => r.close);
+    const current = closes[closes.length - 1];
+    const min = Math.min(...closes);
+    const max = Math.max(...closes);
+    const rank = max === min ? 50 : ((current - min) / (max - min)) * 100;
+    const below = closes.filter(c => c < current).length;
+    const percentile = (below / closes.length) * 100;
+    let regime;
+    if (rank >= 80) regime = 'rich';
+    else if (rank >= 60) regime = 'elevated';
+    else if (rank >= 40) regime = 'fair';
+    else if (rank >= 20) regime = 'cheap';
+    else regime = 'very cheap';
+    return {
+        current: +current.toFixed(2),
+        rank: +rank.toFixed(1),
+        percentile: +percentile.toFixed(1),
+        regime,
+        as_of: slice[slice.length - 1].date,
+        sample_count: closes.length,
+    };
+}
+
 function computePercentile(history, currentIv) {
     if (!history || history.length === 0) return { rank: null, percentile: null };
     const ivs = history.map(h => h.atm_iv).filter(v => v != null);
@@ -483,6 +534,11 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'No usable bar data — market may be closed or feed empty', request_id: requestId }) };
         }
 
+        // ── VIX market-wide regime (parallel to per-symbol IV work) ──
+        const vixPromise = fetchVixHistory()
+            .then(h => computeVixRegime(h, 252))
+            .catch(err => { console.warn('VIX fetch failed:', err.message); return null; });
+
         // ── IV enrichment: ATM ~30DTE call+put → atm_iv, iv/hv ratio, rolling rank ──
         // Step 1: in parallel, find ATM call+put contracts per symbol
         const atmPicks = await Promise.all(analyses.map(a =>
@@ -636,6 +692,8 @@ exports.handler = async (event) => {
             iv_n: b.ivSampleCount,
         });
 
+        const vix = await vixPromise;
+
         return {
             statusCode: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -645,6 +703,7 @@ exports.handler = async (event) => {
                 analyzed: analyses.length,
                 iv_readings: ivRowsToWrite.length,
                 ideas_written: ideas.length,
+                market: vix ? { vix } : null,
                 bearish: bearish.map(summarize),
                 bullish: bullish.map(summarize),
             }, null, 2),
