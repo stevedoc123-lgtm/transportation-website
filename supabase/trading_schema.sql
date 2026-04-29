@@ -71,9 +71,29 @@ create table if not exists research_briefs (
     idea_ids uuid[]                                -- references to trade_ideas surfaced in this brief
 );
 
+-- ── IV history: one ATM-IV reading per symbol per day, used to build IV rank over time ──
+create table if not exists iv_history (
+    id bigserial primary key,
+    captured_at timestamptz default now(),
+    captured_date date not null,                   -- YYYY-MM-DD of the reading (one per symbol per day)
+    symbol text not null,
+    underlying_price numeric(12,4),
+    atm_iv numeric(7,4),                           -- avg of ATM call + put IV (annualized, e.g. 0.34 = 34%)
+    expiry_used date,                              -- which expiry we sampled (~30 DTE target)
+    dte_used int,
+    hv_20d numeric(7,4),                           -- 20d realized vol from price bars (annualized, decimal)
+    iv_hv_ratio numeric(7,3),                      -- atm_iv / hv_20d
+    iv_rank numeric(5,2),                          -- rolling 252d percentile (null until enough history)
+    iv_percentile numeric(5,2),                    -- pct of prior days where iv was below today (rolling 252d)
+    sample_count int                               -- how many prior days backed the rank/percentile
+);
+create unique index if not exists idx_iv_history_symbol_date on iv_history(symbol, captured_date);
+create index if not exists idx_iv_history_symbol_captured on iv_history(symbol, captured_at desc);
+
 -- ── Lock down: enable RLS on all trading tables ──
 -- No policies = anon/authenticated keys have zero access.
 -- Server-side Netlify Functions will use SUPABASE_SERVICE_ROLE_KEY which bypasses RLS.
 alter table trade_ideas     enable row level security;
 alter table alpaca_api_log  enable row level security;
 alter table research_briefs enable row level security;
+alter table iv_history      enable row level security;

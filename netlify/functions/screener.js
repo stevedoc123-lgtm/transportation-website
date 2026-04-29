@@ -91,6 +91,133 @@ async function supabaseInsert(table, row, prefer = 'return=minimal') {
     return null;
 }
 
+async function supabaseUpsert(table, rows, onConflict, prefer = 'return=minimal,resolution=merge-duplicates') {
+    const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`;
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: prefer,
+        },
+        body: JSON.stringify(rows),
+    });
+    if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`Supabase upsert ${table} ${resp.status}: ${txt.slice(0, 200)}`);
+    }
+    return null;
+}
+
+async function supabaseSelect(table, query) {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+        headers: {
+            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'Accept': 'application/json',
+        },
+    });
+    if (!resp.ok) throw new Error(`Supabase select ${table} ${resp.status}`);
+    return await resp.json();
+}
+
+// ── Options / IV helpers ───────────────────────────────────────────────────
+
+const TRADING_BASE = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
+const DATA_BASE_OPTS = 'https://data.alpaca.markets';
+
+function alpacaHeaders() {
+    return {
+        'APCA-API-KEY-ID': process.env.ALPACA_KEY_ID,
+        'APCA-API-SECRET-KEY': process.env.ALPACA_SECRET_KEY,
+        'Accept': 'application/json',
+    };
+}
+
+async function listAtmContracts(symbol, spot, side, dteMin = 21, dteMax = 45, strikeBandPct = 8) {
+    const today = new Date();
+    const min = new Date(today.getTime() + dteMin * 86400000);
+    const max = new Date(today.getTime() + dteMax * 86400000);
+    const fmt = (d) => d.toISOString().split('T')[0];
+    const strikeMin = spot * (1 - strikeBandPct / 100);
+    const strikeMax = spot * (1 + strikeBandPct / 100);
+    const params = new URLSearchParams({
+        underlying_symbols: symbol,
+        type: side,
+        status: 'active',
+        expiration_date_gte: fmt(min),
+        expiration_date_lte: fmt(max),
+        strike_price_gte: strikeMin.toFixed(2),
+        strike_price_lte: strikeMax.toFixed(2),
+        limit: '100',
+    });
+    const r = await fetch(`${TRADING_BASE}/v2/options/contracts?${params}`, { headers: alpacaHeaders() });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return j.option_contracts || [];
+}
+
+function pickAtmFromContracts(contracts, spot, targetDte = 30) {
+    if (!contracts.length) return null;
+    const byExpiry = {};
+    for (const c of contracts) {
+        (byExpiry[c.expiration_date] = byExpiry[c.expiration_date] || []).push(c);
+    }
+    let best = null;
+    for (const [expiry, list] of Object.entries(byExpiry)) {
+        const closest = list.reduce((a, b) =>
+            Math.abs(parseFloat(a.strike_price) - spot) < Math.abs(parseFloat(b.strike_price) - spot) ? a : b
+        );
+        const dte = Math.round((new Date(expiry + 'T16:00:00Z').getTime() - Date.now()) / 86400000);
+        const atmDistPct = Math.abs(parseFloat(closest.strike_price) - spot) / spot * 100;
+        // Score: closer to target DTE and closer to ATM both win
+        const score = -Math.abs(dte - targetDte) - atmDistPct * 2;
+        if (!best || score > best.score) best = { contract: closest, dte, atmDistPct, expiry, score };
+    }
+    return best;
+}
+
+async function fetchOptionSnapshots(contractSymbols) {
+    if (!contractSymbols.length) return {};
+    const out = {};
+    for (let i = 0; i < contractSymbols.length; i += 50) {
+        const chunk = contractSymbols.slice(i, i + 50);
+        const params = new URLSearchParams({ symbols: chunk.join(','), feed: 'indicative' });
+        const r = await fetch(`${DATA_BASE_OPTS}/v1beta1/options/snapshots?${params}`, { headers: alpacaHeaders() });
+        if (!r.ok) continue;
+        const j = await r.json();
+        if (j.snapshots) Object.assign(out, j.snapshots);
+    }
+    return out;
+}
+
+async function findAtmStraddle(symbol, spot) {
+    const [calls, puts] = await Promise.all([
+        listAtmContracts(symbol, spot, 'call').catch(() => []),
+        listAtmContracts(symbol, spot, 'put').catch(() => []),
+    ]);
+    const callPick = pickAtmFromContracts(calls, spot);
+    const putPick = pickAtmFromContracts(puts, spot);
+    return { callPick, putPick };
+}
+
+function computePercentile(history, currentIv) {
+    if (!history || history.length === 0) return { rank: null, percentile: null };
+    const ivs = history.map(h => h.atm_iv).filter(v => v != null);
+    if (ivs.length === 0) return { rank: null, percentile: null };
+    const min = Math.min(...ivs);
+    const max = Math.max(...ivs);
+    const rank = max === min ? 50 : ((currentIv - min) / (max - min)) * 100;
+    const below = ivs.filter(v => v < currentIv).length;
+    const percentile = (below / ivs.length) * 100;
+    return {
+        rank: Math.max(0, Math.min(100, +rank.toFixed(2))),
+        percentile: +percentile.toFixed(2),
+        sampleCount: ivs.length,
+    };
+}
+
 // ── Technicals ──────────────────────────────────────────────────────────────
 
 function rsi14(closes) {
@@ -168,6 +295,26 @@ function analyze(symbol, bars) {
 
 // ── Scoring ─────────────────────────────────────────────────────────────────
 
+// IV-regime adjustment: debit spreads dominate at $125 cap, so chasing rich
+// premium hurts expectancy. Reward cheap premium, penalize rich.
+// Prefers ivRank when meaningful (history >= 30 days), falls back to IV/HV ratio.
+function ivRegimeAdjust(a) {
+    if (a.ivRank != null && a.ivSampleCount >= 30) {
+        if (a.ivRank <= 25) return +4;       // very cheap
+        if (a.ivRank <= 50) return +1;
+        if (a.ivRank >= 80) return -5;       // very rich
+        if (a.ivRank >= 65) return -2;
+        return 0;
+    }
+    if (a.ivHvRatio != null) {
+        if (a.ivHvRatio < 1.0) return +3;    // IV below realized = cheap
+        if (a.ivHvRatio < 1.2) return +1;
+        if (a.ivHvRatio > 1.6) return -4;    // IV well above realized = rich
+        if (a.ivHvRatio > 1.4) return -2;
+    }
+    return 0;
+}
+
 function scoreBearish(a) {
     // Reward overbought + extended above MA + steep recent momentum.
     let s = 0;
@@ -176,6 +323,7 @@ function scoreBearish(a) {
     if (a.mom20 != null && a.mom20 >= 10) s += (a.mom20 - 10);
     // Penalize names already pulling back hard from highs (the move may be done)
     if (a.distFromHighPct != null && a.distFromHighPct < -10) s -= 10;
+    s += ivRegimeAdjust(a);
     return s;
 }
 
@@ -198,7 +346,30 @@ function scoreBullish(a) {
     }
     // Bonus for actually trending up over 20d
     if (a.mom20 >= 2 && a.mom20 <= 12) s += 5;
+    s += ivRegimeAdjust(a);
     return s;
+}
+
+function ivLabel(a) {
+    if (a.atmIv == null) return null;
+    const ivPct = (a.atmIv * 100).toFixed(1);
+    if (a.ivRank != null && a.ivSampleCount >= 30) {
+        let regime;
+        if (a.ivRank <= 25) regime = 'cheap';
+        else if (a.ivRank <= 50) regime = 'fair';
+        else if (a.ivRank <= 75) regime = 'elevated';
+        else regime = 'rich';
+        return `ATM IV ${ivPct}% (rank ${a.ivRank.toFixed(0)} → ${regime})`;
+    }
+    if (a.ivHvRatio != null) {
+        let regime;
+        if (a.ivHvRatio < 1.0) regime = 'cheap vs realized';
+        else if (a.ivHvRatio < 1.3) regime = 'fair vs realized';
+        else if (a.ivHvRatio < 1.6) regime = 'elevated vs realized';
+        else regime = 'rich vs realized';
+        return `ATM IV ${ivPct}% / HV ${a.vol20.toFixed(0)}% = ${a.ivHvRatio.toFixed(2)}x (${regime}, rank building)`;
+    }
+    return `ATM IV ${ivPct}%`;
 }
 
 function buildThesis(a, side) {
@@ -210,10 +381,27 @@ function buildThesis(a, side) {
         `realized vol (20d) ${a.vol20?.toFixed(0)}%`,
         `${a.distFromHighPct >= 0 ? '+' : ''}${a.distFromHighPct?.toFixed(1)}% from 60d high`,
     ];
+    const iv = ivLabel(a);
+    if (iv) parts.push(iv);
+
+    // Strategy hint depends on IV regime — debit when premium is cheap/fair, fade size when rich
+    const richIv = (a.ivRank != null && a.ivSampleCount >= 30 && a.ivRank >= 65) ||
+                   (a.ivHvRatio != null && a.ivHvRatio >= 1.4);
+    const cheapIv = (a.ivRank != null && a.ivSampleCount >= 30 && a.ivRank <= 35) ||
+                    (a.ivHvRatio != null && a.ivHvRatio < 1.05);
+
     if (side === 'bearish') {
-        return `BEARISH SETUP — ${parts.join(' | ')}. Looks overextended; consider a defined-risk put debit spread or a long put on a weakness signal. Max loss = premium paid.`;
+        let strat;
+        if (cheapIv) strat = 'put debit spread is cheap here — favorable risk/reward.';
+        else if (richIv) strat = 'premium is rich — size down or wait, OR consider a bear call credit spread to harvest IV.';
+        else strat = 'defined-risk put debit spread is reasonable.';
+        return `BEARISH SETUP — ${parts.join(' | ')}. Looks overextended; ${strat} Max loss = premium paid.`;
     } else {
-        return `BULLISH SETUP — ${parts.join(' | ')}. In an uptrend with a constructive pullback; consider a long call or call debit spread targeting next leg up. Max loss = premium paid.`;
+        let strat;
+        if (cheapIv) strat = 'call debit spread is cheap here — favorable risk/reward.';
+        else if (richIv) strat = 'premium is rich — size down or wait, OR consider a bull put credit spread to harvest IV.';
+        else strat = 'long call or call debit spread is reasonable.';
+        return `BULLISH SETUP — ${parts.join(' | ')}. Constructive pullback in an uptrend; ${strat} Max loss = premium paid.`;
     }
 }
 
@@ -295,6 +483,91 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'No usable bar data — market may be closed or feed empty', request_id: requestId }) };
         }
 
+        // ── IV enrichment: ATM ~30DTE call+put → atm_iv, iv/hv ratio, rolling rank ──
+        // Step 1: in parallel, find ATM call+put contracts per symbol
+        const atmPicks = await Promise.all(analyses.map(a =>
+            findAtmStraddle(a.symbol, a.last).catch(() => ({ callPick: null, putPick: null }))
+        ));
+
+        // Step 2: collect all chosen contract symbols, fetch IV in batched snapshots
+        const contractSymbols = [];
+        for (const pick of atmPicks) {
+            if (pick.callPick) contractSymbols.push(pick.callPick.contract.symbol);
+            if (pick.putPick) contractSymbols.push(pick.putPick.contract.symbol);
+        }
+        const snapshots = await fetchOptionSnapshots(contractSymbols).catch(() => ({}));
+
+        // Step 3: pull historical IV per symbol so we can compute rolling rank/percentile
+        const todayDate = new Date().toISOString().split('T')[0];
+        const lookbackStart = new Date(Date.now() - 252 * 86400000).toISOString().split('T')[0];
+        let history = [];
+        try {
+            history = await supabaseSelect('iv_history',
+                `select=symbol,captured_date,atm_iv&symbol=in.(${analyses.map(a => a.symbol).join(',')})&captured_date=gte.${lookbackStart}&captured_date=lt.${todayDate}&order=captured_date.desc`
+            );
+        } catch (err) {
+            console.warn('iv_history select failed:', err.message);
+        }
+        const histBySymbol = {};
+        for (const row of history) {
+            (histBySymbol[row.symbol] = histBySymbol[row.symbol] || []).push(row);
+        }
+
+        // Step 4: enrich each analysis with IV stats + queue today's reading for upsert
+        const ivRowsToWrite = [];
+        for (let i = 0; i < analyses.length; i++) {
+            const a = analyses[i];
+            const pick = atmPicks[i];
+            const callSnap = pick.callPick ? snapshots[pick.callPick.contract.symbol] : null;
+            const putSnap = pick.putPick ? snapshots[pick.putPick.contract.symbol] : null;
+            const callIv = callSnap?.impliedVolatility ?? callSnap?.greeks?.impliedVolatility ?? null;
+            const putIv = putSnap?.impliedVolatility ?? putSnap?.greeks?.impliedVolatility ?? null;
+            const ivs = [callIv, putIv].filter(v => typeof v === 'number' && v > 0);
+            if (ivs.length === 0) {
+                a.atmIv = null;
+                a.ivHvRatio = null;
+                a.ivRank = null;
+                a.ivPercentile = null;
+                a.ivSampleCount = 0;
+                continue;
+            }
+            const atmIv = ivs.reduce((x, y) => x + y, 0) / ivs.length;
+            const hvDecimal = a.vol20 != null ? a.vol20 / 100 : null;
+            const ivHvRatio = hvDecimal && hvDecimal > 0 ? atmIv / hvDecimal : null;
+            const expiry = (pick.callPick || pick.putPick).expiry;
+            const dteUsed = (pick.callPick || pick.putPick).dte;
+
+            const { rank, percentile, sampleCount } = computePercentile(histBySymbol[a.symbol] || [], atmIv);
+
+            a.atmIv = atmIv;
+            a.ivHvRatio = ivHvRatio;
+            a.ivRank = rank;
+            a.ivPercentile = percentile;
+            a.ivSampleCount = sampleCount || 0;
+            a.ivExpiryUsed = expiry;
+            a.ivDteUsed = dteUsed;
+
+            ivRowsToWrite.push({
+                captured_date: todayDate,
+                symbol: a.symbol,
+                underlying_price: +a.last.toFixed(4),
+                atm_iv: +atmIv.toFixed(4),
+                expiry_used: expiry,
+                dte_used: dteUsed,
+                hv_20d: hvDecimal != null ? +hvDecimal.toFixed(4) : null,
+                iv_hv_ratio: ivHvRatio != null ? +ivHvRatio.toFixed(3) : null,
+                iv_rank: rank,
+                iv_percentile: percentile,
+                sample_count: sampleCount || 0,
+            });
+        }
+
+        // Persist today's IV readings (upsert, one per symbol+date)
+        if (ivRowsToWrite.length > 0) {
+            await supabaseUpsert('iv_history', ivRowsToWrite, 'symbol,captured_date')
+                .catch(err => console.warn('iv_history upsert failed:', err.message));
+        }
+
         // Score and pick top 3 each side
         const bearish = analyses.map(a => ({ ...a, score: scoreBearish(a) }))
             .filter(a => a.score > 0)
@@ -306,32 +579,62 @@ exports.handler = async (event) => {
             .sort((a, b) => b.score - a.score)
             .slice(0, 3);
 
+        function ivTag(a) {
+            if (a.ivRank != null && a.ivSampleCount >= 30) {
+                if (a.ivRank <= 25) return 'iv_cheap';
+                if (a.ivRank >= 75) return 'iv_rich';
+                return 'iv_fair';
+            }
+            if (a.ivHvRatio != null) {
+                if (a.ivHvRatio < 1.0) return 'iv_cheap';
+                if (a.ivHvRatio > 1.5) return 'iv_rich';
+                return 'iv_fair';
+            }
+            return null;
+        }
+
         // Write to trade_ideas
         const ideas = [];
         for (const a of bearish) {
+            const tags = ['screener_v2', 'bearish'];
+            const t = ivTag(a); if (t) tags.push(t);
             ideas.push({
                 status: 'idea',
                 symbol: a.symbol,
                 strategy: 'directional_bearish',
                 thesis: buildThesis(a, 'bearish'),
                 invalidation: buildInvalidation(a, 'bearish'),
-                tags: ['screener_v1', 'bearish'],
+                tags,
             });
         }
         for (const a of bullish) {
+            const tags = ['screener_v2', 'bullish'];
+            const t = ivTag(a); if (t) tags.push(t);
             ideas.push({
                 status: 'idea',
                 symbol: a.symbol,
                 strategy: 'directional_bullish',
                 thesis: buildThesis(a, 'bullish'),
                 invalidation: buildInvalidation(a, 'bullish'),
-                tags: ['screener_v1', 'bullish'],
+                tags,
             });
         }
 
         if (ideas.length > 0) {
             await supabaseInsert('trade_ideas', ideas);
         }
+
+        const summarize = (b) => ({
+            symbol: b.symbol,
+            score: +b.score.toFixed(1),
+            rsi: b.rsi?.toFixed(1),
+            dist_ma: b.distFromMaPct?.toFixed(1),
+            mom20: b.mom20?.toFixed(1),
+            iv: b.atmIv != null ? +(b.atmIv * 100).toFixed(1) : null,
+            iv_hv: b.ivHvRatio != null ? +b.ivHvRatio.toFixed(2) : null,
+            iv_rank: b.ivRank,
+            iv_n: b.ivSampleCount,
+        });
 
         return {
             statusCode: 200,
@@ -340,9 +643,10 @@ exports.handler = async (event) => {
                 ok: true,
                 request_id: requestId,
                 analyzed: analyses.length,
+                iv_readings: ivRowsToWrite.length,
                 ideas_written: ideas.length,
-                bearish: bearish.map(b => ({ symbol: b.symbol, score: +b.score.toFixed(1), rsi: b.rsi?.toFixed(1), dist_ma: b.distFromMaPct?.toFixed(1), mom20: b.mom20?.toFixed(1) })),
-                bullish: bullish.map(b => ({ symbol: b.symbol, score: +b.score.toFixed(1), rsi: b.rsi?.toFixed(1), dist_ma: b.distFromMaPct?.toFixed(1), mom20: b.mom20?.toFixed(1) })),
+                bearish: bearish.map(summarize),
+                bullish: bullish.map(summarize),
             }, null, 2),
         };
     } catch (err) {
