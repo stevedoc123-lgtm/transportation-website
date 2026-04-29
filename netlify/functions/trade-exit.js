@@ -1,36 +1,54 @@
 /**
  * POST /.netlify/functions/trade-exit
  *
- * Daily exit-management pass. Scans every open spread (trade_ideas with
- * status='paper_open'), evaluates current natural exit credit, and closes
- * any spread that hits one of:
- *   - take_profit: realized credit >= entry_debit + 0.5 * max_gain (50% of max gain)
- *   - dte_management: <= 21 days to expiry (gamma risk explodes near expiry)
+ * Hourly exit-management pass with trailing-stop logic. Scans every open
+ * spread (trade_ideas with status='paper_open'), evaluates current natural
+ * exit credit, and decides whether to close.
  *
- * Closing orders are multi-leg, day-limit, at natural exit credit. If they
- * don't fill same day, tomorrow's run will retry with fresh quotes — no
- * duplicate-order tracking needed.
+ * State machine per spread (current_pct = % of max gain currently realized;
+ * peak_pct = highest % of max gain ever seen since opening):
+ *   - current_pct >= 90:                       close (near_max — marginal upside left)
+ *   - peak_pct >= 50, drawdown >= trail_pct:   close (trailing_stop — locking in)
+ *   - dte <= 21:                               close (dte_management — gamma risk)
+ *   - else:                                    hold
  *
- * On fill, the trade_ideas row is updated with status='paper_closed',
- * actual_exit_price, realized_pnl_usd, realized_pnl_pct, closed_at.
+ * Trail tightness scales with how good the peak got:
+ *   peak_pct 50–75%:   trail = 10%   (loose; let a hot move keep running)
+ *   peak_pct 75–85%:   trail = 7%
+ *   peak_pct 85%+ :    trail = 5%    (tight; protect the gain)
+ *
+ * Every run updates trade_ideas.peak_credit so the trail follows the price up.
+ *
+ * Closing orders are multi-leg, day-limit, at natural exit credit. If unfilled
+ * same day, the next hourly run retries with fresh quotes.
  *
  * Body (all optional):
- *   { dry_run: false,                        // log decisions but don't fire
- *     take_profit_pct: 50,                   // % of max gain that triggers close
- *     dte_threshold: 21 }                    // close anything inside this DTE
+ *   { dry_run: false,
+ *     near_max_pct: 90,         // close outright at this % of max gain
+ *     arm_trail_pct: 50,        // peak must hit this % before trailing arms
+ *     dte_threshold: 21 }
  *
  * Auth: X-Admin-Password, X-Trigger-Token, or Netlify Scheduled invoke.
  *
- * Schedule: weekdays 19:30 UTC (3:30 PM ET, 30 min before market close —
- * leaves time for fills, avoids closing-print volatility).
+ * Schedule: every hour at :00, weekdays 14:00–19:00 UTC (10am–3pm ET).
+ * Six runs per market day; covers most of cash session.
  */
 
 const SUPABASE_URL = 'https://dshhqozxeaetzenekzqr.supabase.co';
 const TRADING_BASE = process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
 const DATA_BASE = 'https://data.alpaca.markets';
 
-const TAKE_PROFIT_PCT_DEFAULT = parseFloat(process.env.TAKE_PROFIT_PCT || '50');
+const NEAR_MAX_PCT_DEFAULT = parseFloat(process.env.NEAR_MAX_PCT || '90');
+const ARM_TRAIL_PCT_DEFAULT = parseFloat(process.env.ARM_TRAIL_PCT || '50');
 const DTE_THRESHOLD_DEFAULT = parseInt(process.env.DTE_THRESHOLD || '21', 10);
+
+// Trail tightness as a function of peak profit: looser when peak is just
+// getting going, tighter as we approach max gain.
+function trailPctForPeak(peakPct) {
+    if (peakPct >= 85) return 5;
+    if (peakPct >= 75) return 7;
+    return 10;                                  // peak 50–75
+}
 
 const sbHeaders = () => ({
     apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -134,6 +152,7 @@ function classifyIdea(idea) {
         short_strike: shortInfo.strike,
         width: Math.abs(longInfo.strike - shortInfo.strike),
         entry_debit: parseFloat(idea.planned_entry_price || idea.actual_entry_price || idea.structure?.limit_price || '0'),
+        prior_peak_credit: idea.peak_credit != null ? parseFloat(idea.peak_credit) : null,
     };
 }
 
@@ -142,7 +161,8 @@ function dteFromExpiry(expiry) {
     return Math.ceil((ts - Date.now()) / 86400000);
 }
 
-function evaluateExit(spread, snapshots, takeProfitPct, dteThreshold) {
+function evaluateExit(spread, snapshots, opts) {
+    const { nearMaxPct, armTrailPct, dteThreshold } = opts;
     const longSnap = snapshots[spread.long_symbol];
     const shortSnap = snapshots[spread.short_symbol];
     const longBid = longSnap?.latestQuote?.bp ?? null;
@@ -151,34 +171,53 @@ function evaluateExit(spread, snapshots, takeProfitPct, dteThreshold) {
     const shortAsk = shortSnap?.latestQuote?.ap ?? null;
     const dte = dteFromExpiry(spread.expiry);
 
-    // Natural exit credit: sell the long at bid, buy back the short at ask.
-    // This is the conservative price at which we can immediately exit.
+    // Natural exit credit = sell long at bid, buy short back at ask.
     const naturalCredit = (longBid != null && shortAsk != null)
         ? +(longBid - shortAsk).toFixed(2)
         : null;
-
-    // Mid credit: less reliable when bid/ask is wide (UNH-style mark noise).
     const midCredit = (longBid != null && longAsk != null && shortBid != null && shortAsk != null)
         ? +(((longBid + longAsk) / 2) - ((shortBid + shortAsk) / 2)).toFixed(2)
         : null;
 
     const maxGain = +(spread.width - spread.entry_debit).toFixed(2);
     const maxLoss = spread.entry_debit;
-    const targetCredit = +(spread.entry_debit + maxGain * (takeProfitPct / 100)).toFixed(2);
 
-    // Use natural for trigger — only fire when we can ACTUALLY realize the gain.
-    let trigger = null;
-    let reason = null;
-    if (naturalCredit != null && naturalCredit >= targetCredit) {
-        trigger = 'take_profit';
-        reason = `natural credit $${naturalCredit} ≥ target $${targetCredit} (${takeProfitPct}% of max gain $${maxGain})`;
-    } else if (dte <= dteThreshold) {
+    // Update peak: highest natural credit ever seen for this spread.
+    // If we have no quote this run, fall back to the prior peak.
+    const priorPeak = spread.prior_peak_credit;
+    const updatedPeak = naturalCredit != null
+        ? +Math.max(priorPeak ?? naturalCredit, naturalCredit).toFixed(2)
+        : priorPeak;
+
+    const currentPct = (naturalCredit != null && maxGain > 0)
+        ? +(((naturalCredit - spread.entry_debit) / maxGain) * 100).toFixed(1)
+        : null;
+    const peakPct = (updatedPeak != null && maxGain > 0)
+        ? +(((updatedPeak - spread.entry_debit) / maxGain) * 100).toFixed(1)
+        : null;
+    const drawdownFromPeak = (naturalCredit != null && updatedPeak != null && updatedPeak > 0)
+        ? +(((updatedPeak - naturalCredit) / updatedPeak) * 100).toFixed(1)
+        : null;
+
+    // ── State machine ──
+    let trigger = null, reason = null;
+
+    if (currentPct != null && currentPct >= nearMaxPct) {
+        trigger = 'near_max';
+        reason = `current ${currentPct}% of max gain ≥ ${nearMaxPct}% — minimal upside left`;
+    } else if (peakPct != null && peakPct >= armTrailPct && drawdownFromPeak != null) {
+        const trailPct = trailPctForPeak(peakPct);
+        if (drawdownFromPeak >= trailPct) {
+            trigger = 'trailing_stop';
+            reason = `peak hit ${peakPct}% of max gain (credit $${updatedPeak}); current drew down ${drawdownFromPeak}% ≥ ${trailPct}% trail — locking in`;
+        }
+    }
+    if (!trigger && dte <= dteThreshold) {
         trigger = 'dte_management';
-        reason = `DTE ${dte} ≤ ${dteThreshold}`;
+        reason = `DTE ${dte} ≤ ${dteThreshold} — closing for gamma management`;
     }
 
     const realizedProfit = naturalCredit != null ? +(naturalCredit - spread.entry_debit).toFixed(2) : null;
-    const realizedPnlPct = (realizedProfit != null && maxGain > 0) ? +((realizedProfit / maxGain) * 100).toFixed(1) : null;
 
     return {
         ...spread,
@@ -187,11 +226,13 @@ function evaluateExit(spread, snapshots, takeProfitPct, dteThreshold) {
         short_bid: shortBid, short_ask: shortAsk,
         natural_credit: naturalCredit,
         mid_credit: midCredit,
-        target_credit: targetCredit,
+        updated_peak: updatedPeak,
+        peak_pct: peakPct,
+        current_pct: currentPct,
+        drawdown_from_peak: drawdownFromPeak,
         max_gain: maxGain,
         max_loss: maxLoss,
         realized_profit: realizedProfit,
-        realized_pnl_pct: realizedPnlPct,
         trigger,
         reason,
     };
@@ -241,23 +282,25 @@ exports.handler = async (event) => {
     let cfg = {};
     try { cfg = event.body ? JSON.parse(event.body) : {}; } catch {}
     const dryRun = !!cfg.dry_run;
-    const takeProfitPct = cfg.take_profit_pct ?? TAKE_PROFIT_PCT_DEFAULT;
+    const nearMaxPct = cfg.near_max_pct ?? NEAR_MAX_PCT_DEFAULT;
+    const armTrailPct = cfg.arm_trail_pct ?? ARM_TRAIL_PCT_DEFAULT;
     const dteThreshold = cfg.dte_threshold ?? DTE_THRESHOLD_DEFAULT;
 
     const summary = {
         ok: true,
         started_at: new Date().toISOString(),
         dry_run: dryRun,
-        config: { take_profit_pct: takeProfitPct, dte_threshold: dteThreshold },
+        config: { near_max_pct: nearMaxPct, arm_trail_pct: armTrailPct, dte_threshold: dteThreshold },
         evaluated: [],
+        peak_updates: 0,
         closed: [],
         skipped: [],
         errors: [],
     };
 
     try {
-        // 1. Pull all open trade_ideas
-        const openIdeas = await sbSelect('trade_ideas?status=eq.paper_open&select=id,symbol,strategy,structure,planned_entry_price,actual_entry_price,planned_max_loss_usd,planned_max_gain_usd&order=created_at.desc');
+        // 1. Pull all open trade_ideas (include peak_credit for trailing logic)
+        const openIdeas = await sbSelect('trade_ideas?status=eq.paper_open&select=id,symbol,strategy,structure,planned_entry_price,actual_entry_price,planned_max_loss_usd,planned_max_gain_usd,peak_credit&order=created_at.desc');
 
         // 2. Classify each into a spread shape
         const spreads = openIdeas.map(classifyIdea).filter(Boolean);
@@ -271,7 +314,7 @@ exports.handler = async (event) => {
         const snapshots = await fetchSnapshots(allLegSymbols);
 
         // 4. Evaluate each spread
-        const evaluations = spreads.map(s => evaluateExit(s, snapshots, takeProfitPct, dteThreshold));
+        const evaluations = spreads.map(s => evaluateExit(s, snapshots, { nearMaxPct, armTrailPct, dteThreshold }));
         summary.evaluated = evaluations.map(e => ({
             idea_id: e.idea_id,
             symbol: e.underlying,
@@ -281,12 +324,29 @@ exports.handler = async (event) => {
             dte: e.dte,
             entry_debit: e.entry_debit,
             natural_credit: e.natural_credit,
-            target_credit: e.target_credit,
+            current_pct: e.current_pct,
+            peak_credit: e.updated_peak,
+            peak_pct: e.peak_pct,
+            drawdown_from_peak: e.drawdown_from_peak,
             realized_pnl: e.realized_profit,
-            realized_pnl_pct: e.realized_pnl_pct,
             trigger: e.trigger,
             reason: e.reason,
         }));
+
+        // 4b. Persist peak_credit for every spread that has a fresh quote — even
+        //     ones we're not closing. This is what lets the trail follow the price up.
+        for (const e of evaluations) {
+            const newPeak = e.updated_peak;
+            const oldPeak = e.prior_peak_credit;
+            if (newPeak != null && (oldPeak == null || newPeak > oldPeak)) {
+                if (!dryRun) {
+                    await sbUpdate('trade_ideas', e.idea_id, { peak_credit: newPeak }).catch(err => {
+                        summary.errors.push({ idea_id: e.idea_id, where: 'peak_update', error: err.message });
+                    });
+                }
+                summary.peak_updates++;
+            }
+        }
 
         // 5. For each triggered spread, submit closing order (or log if dry_run)
         for (const e of evaluations) {
@@ -294,7 +354,8 @@ exports.handler = async (event) => {
                 summary.skipped.push({
                     idea_id: e.idea_id, symbol: e.underlying,
                     reason: 'no trigger',
-                    natural: e.natural_credit, target: e.target_credit, dte: e.dte,
+                    current_pct: e.current_pct, peak_pct: e.peak_pct,
+                    drawdown_from_peak: e.drawdown_from_peak, dte: e.dte,
                 });
                 continue;
             }
@@ -315,8 +376,9 @@ exports.handler = async (event) => {
                     status: 'paper_closed',
                     actual_exit_price: e.natural_credit,
                     realized_pnl_usd: +(e.realized_profit * 100).toFixed(2),  // dollars (×100 per spread contract)
-                    realized_pnl_pct: e.realized_pnl_pct,
+                    realized_pnl_pct: e.current_pct,
                     closed_at: new Date().toISOString(),
+                    peak_credit: e.updated_peak,
                     notes: `Auto-exit (${e.trigger}). ${e.reason}. Closing limit $${close.limit}. Order ${close.order_id}.`,
                 });
                 summary.closed.push({
@@ -325,7 +387,8 @@ exports.handler = async (event) => {
                     order_id: close.order_id, request_id: close.request_id,
                     limit: close.limit,
                     realized_pnl: +(e.realized_profit * 100).toFixed(2),
-                    realized_pnl_pct: e.realized_pnl_pct,
+                    current_pct: e.current_pct,
+                    peak_pct: e.peak_pct,
                 });
             } catch (err) {
                 summary.errors.push({ idea_id: e.idea_id, symbol: e.underlying, error: err.message });
@@ -347,7 +410,10 @@ exports.handler = async (event) => {
     }
 };
 
-// Netlify Scheduled Function: weekdays 19:30 UTC (3:30 PM ET, 30 min before close).
+// Netlify Scheduled Function: every hour at :00, weekdays 14:00–19:00 UTC.
+// That's 10am, 11am, 12pm, 1pm, 2pm, 3pm ET — 6 runs per market day.
+// 10am avoids the noisy first 30 min of the open; 3pm gives time for the last
+// fill to settle before close.
 exports.config = {
-    schedule: '30 19 * * 1-5',
+    schedule: '0 14-19 * * 1-5',
 };

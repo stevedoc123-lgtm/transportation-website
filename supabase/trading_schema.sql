@@ -71,6 +71,10 @@ create table if not exists research_briefs (
     idea_ids uuid[]                                -- references to trade_ideas surfaced in this brief
 );
 
+-- ── Trailing-exit support: track peak natural exit credit per spread ──
+-- One ALTER per existing schema: adds the peak_credit column used by trade-exit.js.
+alter table trade_ideas add column if not exists peak_credit numeric(7,2);
+
 -- ── IV history: one ATM-IV reading per symbol per day, used to build IV rank over time ──
 create table if not exists iv_history (
     id bigserial primary key,
