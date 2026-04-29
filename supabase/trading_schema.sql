@@ -75,6 +75,20 @@ create table if not exists research_briefs (
 -- One ALTER per existing schema: adds the peak_credit column used by trade-exit.js.
 alter table trade_ideas add column if not exists peak_credit numeric(7,2);
 
+-- ── Automation heartbeat: one row per scheduled-job run, used to detect
+--    silent failures (Mac mini asleep, network outage, etc.) ──
+create table if not exists automation_runs (
+    id bigserial primary key,
+    name text not null,                            -- 'trade-exit', 'trade-cycle', etc.
+    source text not null,                          -- 'netlify-scheduled' | 'mac-mini-cron' | 'manual'
+    status text not null,                          -- 'ok' | 'errored'
+    started_at timestamptz,
+    completed_at timestamptz default now(),
+    summary jsonb                                  -- the run's result payload
+);
+create index if not exists idx_automation_runs_name_completed on automation_runs(name, completed_at desc);
+alter table automation_runs enable row level security;
+
 -- ── IV history: one ATM-IV reading per symbol per day, used to build IV rank over time ──
 create table if not exists iv_history (
     id bigserial primary key,

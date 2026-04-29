@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.filmtranspo.trade-exit</string>
+
+    <!-- Wrapper: cd into the repo, run via netlify dev:exec so env vars come
+         from Netlify cloud. PATH is set so launchd can find node + netlify. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>cd /Users/stevendocherty/Projects/transportation-website &amp;&amp; PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" /opt/homebrew/bin/netlify dev:exec node scripts/trade-exit-runner.js</string>
+    </array>
+
+    <!-- Run every 1800 seconds (30 min). The script self-gates on market hours,
+         so off-hours runs no-op cheaply. Using StartInterval (not Calendar) so
+         launchd handles drift gracefully and the schedule is timezone-agnostic. -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+
+    <!-- Run once at load to verify wiring (will no-op if outside market hours). -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/stevendocherty/Projects/transportation-website/logs/trade-exit.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/stevendocherty/Projects/transportation-website/logs/trade-exit.err.log</string>
+
+    <!-- Keep the process from being treated as misbehaving if it runs too often. -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+</dict>
+</plist>
